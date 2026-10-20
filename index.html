@@ -134,6 +134,7 @@
     margin-bottom: 12px;
   }
   .role h3 { margin: 0 0 6px; font-size: 17px; letter-spacing: .06em; }
+  .role h3 .sub { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; letter-spacing: .02em; }
   .role p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
   .role:hover { transform: translateY(-3px); border-color: rgba(231,192,120,.45); }
   .role[aria-pressed="true"] {
@@ -195,7 +196,7 @@
 
   header.nav {
     position: sticky; top: 0; z-index: 20;
-    display: flex; align-items: center; gap: 20px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap; row-gap: 10px;
     padding: 14px 30px;
     background: rgba(14,13,16,.78);
     backdrop-filter: blur(16px);
@@ -210,8 +211,8 @@
   .nav-tabs { display: flex; gap: 6px; margin-left: 12px; }
   .tab {
     background: transparent; border: 1px solid transparent;
-    color: var(--muted); padding: 9px 16px; border-radius: 999px;
-    font-size: 14px; transition: .2s;
+    color: var(--muted); padding: 9px 15px; border-radius: 999px;
+    font-size: 13.5px; transition: .2s; font-family: inherit;
   }
   .tab:hover { color: var(--text); }
   .tab.active {
@@ -406,6 +407,226 @@
   }
   .add:hover { background: var(--gold); color: #1a1610; }
 
+  /* ===== 身份切换（顶部右侧） ===== */
+  .role-switch { position: relative; }
+  .role-current { cursor: pointer; font-family: inherit; }
+  .role-current:hover { border-color: rgba(231,192,120,.5); color: var(--text); }
+  .role-current .caret { font-size: 10px; opacity: .7; }
+  .role-menu {
+    position: absolute; right: 0; top: calc(100% + 10px); width: 244px;
+    padding: 8px; display: none; z-index: 45;
+    background: rgba(24,23,30,.97); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: var(--shadow); backdrop-filter: blur(16px);
+  }
+  .role-menu.show { display: block; animation: fade .18s ease both; }
+  .role-menu .rm {
+    display: flex; align-items: center; gap: 11px; width: 100%;
+    padding: 10px; border-radius: 11px; border: 1px solid transparent;
+    background: transparent; color: var(--text); text-align: left;
+    transition: .18s; font-family: inherit; cursor: pointer;
+  }
+  .role-menu .rm:hover { background: rgba(255,255,255,.05); border-color: var(--line); }
+  .role-menu .rm.on { background: rgba(231,192,120,.13); border-color: rgba(231,192,120,.42); }
+  .role-menu .rm .ico {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    display: grid; place-items: center; font-size: 16px; background: rgba(231,192,120,.16);
+  }
+  .role-menu .rm .rn { display: block; font-size: 14px; font-weight: 600; }
+  .role-menu .rm .rn .sub { font-size: 11.5px; font-weight: 400; color: var(--muted); margin-left: 5px; }
+  .role-menu .rm .rs { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .role-menu .rm .tick { margin-left: auto; color: var(--gold); font-size: 13px; }
+  .role-menu .rmhint { font-size: 11.5px; color: #6f6a7b; padding: 8px 10px 4px; line-height: 1.6; }
+
+  /* ===== 绘画（三种身份通用） ===== */
+  .draw-layout { display: grid; grid-template-columns: 1fr 384px; gap: 18px; align-items: start; }
+  .draw-main { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+
+  .toolbar { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .tool {
+    width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.03); color: var(--muted); font-size: 16px;
+    display: grid; place-items: center; transition: .2s; font-family: inherit;
+  }
+  .tool:hover { color: var(--text); border-color: rgba(231,192,120,.45); }
+  .tool.on { background: linear-gradient(120deg, var(--gold), var(--gold-2)); color: #1a1610; border-color: transparent; }
+  .tb-group { display: flex; align-items: center; gap: 8px; }
+  .tb-group .lb { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .tb-sep { width: 1px; height: 26px; background: var(--line); }
+  .tb-input {
+    background: rgba(14,13,16,.6); border: 1px solid var(--line); border-radius: 10px;
+    color: var(--text); padding: 8px 10px; font-size: 13px; outline: none; font-family: inherit;
+  }
+  .tb-input[type="range"] { width: 104px; padding: 0; accent-color: var(--gold); border: none; background: transparent; }
+  .swatches { display: flex; gap: 6px; }
+  .sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .sw.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(231,192,120,.28); }
+
+  .canvas-wrap {
+    position: relative; width: 100%; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--line); background: #14131c;
+  }
+  .canvas-wrap canvas { display: block; width: 100%; height: auto; touch-action: none; }
+  #drawOverlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .canvas-tip { display: flex; justify-content: space-between; gap: 14px; margin-top: 12px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+  .canvas-tip b { color: var(--gold); font-weight: 500; }
+
+  .draw-side { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .side-tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .side-tab {
+    flex: 1; padding: 14px 10px; background: transparent; border: none;
+    color: var(--muted); font-size: 13.5px; border-bottom: 2px solid transparent;
+    transition: .2s; font-family: inherit; cursor: pointer; letter-spacing: .04em;
+  }
+  .side-tab.active { color: var(--gold); border-bottom-color: var(--gold); background: rgba(231,192,120,.06); }
+  .side-pane { display: none; padding: 16px; }
+  .side-pane.active { display: block; animation: fade .3s ease both; }
+  .pane-head { font-size: 12.5px; color: var(--gold); letter-spacing: .12em; margin: 0 0 10px; }
+  .pane-desc { color: var(--muted); font-size: 12.5px; line-height: 1.75; margin: 0 0 14px; }
+
+  .gap-list { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; margin-top: 14px; }
+  .gap-item {
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+    background: rgba(255,255,255,.02); transition: .2s; font-family: inherit;
+    text-align: left; color: var(--text); cursor: pointer; width: 100%;
+  }
+  .gap-item:hover { border-color: rgba(231,192,120,.45); }
+  .gap-item.on { border-color: #d97b7b; background: rgba(217,123,123,.1); }
+  .gap-item .gt { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+  .gap-item .gm { color: var(--muted); font-size: 11.5px; margin-left: auto; }
+  .gap-item .gd { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.65; }
+  .sev { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .sev.s1 { color: #8fd9a8; border: 1px solid rgba(143,217,168,.4); }
+  .sev.s2 { color: var(--gold); border: 1px solid rgba(231,192,120,.42); }
+  .sev.s3 { color: #d97b7b; border: 1px solid rgba(217,123,123,.45); }
+
+  .ref-search { display: flex; gap: 8px; margin-bottom: 11px; }
+  .ref-search input {
+    flex: 1; background: rgba(14,13,16,.6); border: 1px solid var(--line);
+    border-radius: 11px; padding: 11px 13px; color: var(--text); font-size: 13px; outline: none; font-family: inherit;
+  }
+  .ref-search input:focus { border-color: rgba(231,192,120,.55); }
+  .ref-chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 13px; }
+  .ref-chips button {
+    border: 1px dashed var(--line); background: transparent; color: var(--muted);
+    border-radius: 999px; padding: 5px 11px; font-size: 12px; transition: .2s; font-family: inherit; cursor: pointer;
+  }
+  .ref-chips button:hover, .ref-chips button.on { color: var(--gold); border-color: rgba(231,192,120,.5); }
+  .ref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; max-height: 430px; overflow-y: auto; }
+  .ref-card {
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden; padding: 0;
+    background: rgba(255,255,255,.02); transition: .2s; font-family: inherit;
+    text-align: left; color: var(--text); cursor: pointer;
+  }
+  .ref-card:hover { border-color: rgba(231,192,120,.45); transform: translateY(-2px); }
+  .ref-card img { aspect-ratio: 3 / 4; }
+  .ref-card .rt { font-size: 12px; padding: 8px 9px; }
+  .ref-card .rtags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .ref-detail img { border-radius: 12px; border: 1px solid var(--line); aspect-ratio: 3 / 4; }
+  .ref-detail h4 { margin: 13px 0 6px; font-family: var(--serif); font-size: 17px; }
+  .ref-detail .notes { font-size: 12.5px; color: #c9c3d4; line-height: 1.8; }
+  .ref-detail .meta { color: var(--muted); font-size: 11.5px; margin-top: 10px; }
+
+  /* ===== 周边定制（画师专属） ===== */
+  .workshop { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; align-items: start; }
+  .ws-form {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px;
+  }
+  .ws-form > .step { padding: 20px 0; border-bottom: 1px dashed var(--line); }
+  .ws-form > .step:first-child { padding-top: 0; }
+  .ws-form > .step:last-of-type { border-bottom: none; padding-bottom: 6px; }
+  .step h4 {
+    margin: 0 0 14px; font-size: 13px; letter-spacing: .14em; color: var(--gold);
+    display: flex; align-items: center; gap: 9px;
+  }
+  .step h4 .no {
+    width: 20px; height: 20px; border-radius: 50%; flex: none;
+    background: rgba(231,192,120,.16); color: var(--gold);
+    font-size: 11px; display: grid; place-items: center; font-family: var(--sans);
+  }
+  .step .hint-sm { color: var(--muted); font-size: 12px; margin: -8px 0 12px; }
+
+  .art-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .art-opt {
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    background: transparent; padding: 0; transition: .2s; font-family: inherit; color: var(--muted);
+  }
+  .art-opt img { aspect-ratio: 3 / 4; }
+  .art-opt .nm { font-size: 11.5px; padding: 7px 6px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .art-opt:hover { border-color: rgba(231,192,120,.5); }
+  .art-opt.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 10px 24px rgba(231,192,120,.16); }
+  .art-opt.on .nm { color: var(--gold); }
+
+  .chip-opt {
+    border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted);
+    border-radius: 999px; padding: 9px 16px; font-size: 13px; transition: .2s; font-family: inherit;
+  }
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; }
+  .chip-opt:hover { color: var(--text); border-color: rgba(231,192,120,.45); }
+  .chip-opt.on {
+    background: linear-gradient(120deg, var(--gold), var(--gold-2));
+    color: #1a1610; border-color: transparent; font-weight: 600;
+  }
+
+  .merch-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .merch {
+    border: 1px solid var(--line); background: rgba(255,255,255,.02); border-radius: 14px;
+    padding: 14px; text-align: left; color: var(--text); transition: .2s;
+    font-family: inherit; cursor: pointer;
+  }
+  .merch:hover { border-color: rgba(231,192,120,.45); transform: translateY(-2px); }
+  .merch.on { border-color: var(--gold); background: linear-gradient(180deg, rgba(231,192,120,.13), rgba(255,255,255,.02)); }
+  .merch .mtop { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; }
+  .merch .mav {
+    width: 32px; height: 32px; border-radius: 9px; flex: none;
+    display: grid; place-items: center; font-size: 15px; background: rgba(231,192,120,.16);
+  }
+  .merch .mn { font-size: 14px; font-weight: 600; }
+  .merch .ms { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .merch .star { margin-left: auto; color: var(--gold); font-size: 12px; white-space: nowrap; }
+  .merch .mfacts { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+  .merch .mfacts b { color: var(--text); font-weight: 500; }
+  .merch .mnote { margin-top: 10px; font-size: 11.5px; color: #7b7488; line-height: 1.6; }
+
+  .form-grid .span2 { grid-column: span 2; }
+  .form-grid label.switch {
+    display: flex; align-items: center; gap: 9px; margin: 0;
+    font-size: 13px; color: var(--text);
+    background: rgba(14,13,16,.6); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer;
+  }
+  .form-grid label.switch input { width: auto; accent-color: var(--gold); }
+
+  .ws-preview {
+    position: sticky; top: 88px;
+    background: linear-gradient(180deg, rgba(231,192,120,.08), rgba(255,255,255,.02));
+    border: 1px solid rgba(231,192,120,.32);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .ws-preview h3 { font-family: var(--serif); font-size: 19px; letter-spacing: .1em; margin: 0 0 4px; }
+  .ws-preview .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+  .pv-stage {
+    display: grid; place-items: center; min-height: 230px; padding: 28px 18px;
+    background: radial-gradient(circle at 50% 18%, rgba(231,192,120,.13), rgba(14,13,16,.6) 72%);
+    border: 1px solid var(--line); border-radius: 14px; margin-bottom: 12px;
+  }
+  .pv-item { position: relative; width: 150px; overflow: hidden; background: #111; box-shadow: 0 16px 36px rgba(0,0,0,.6); }
+  .pv-item .sheen {
+    position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: .78;
+    background: linear-gradient(115deg, rgba(255,255,255,.42), rgba(150,210,255,.3) 24%,
+      rgba(255,180,240,.34) 47%, rgba(255,255,255,.14) 61%, rgba(180,255,235,.3) 79%, rgba(255,255,255,.4));
+  }
+  .pv-cap { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+  .cost { display: flex; flex-direction: column; gap: 9px; font-size: 13px; margin-bottom: 14px; }
+  .cost .r { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
+  .cost .r b { color: var(--text); font-weight: 500; }
+  .cost .r.total { border-top: 1px dashed var(--line); padding-top: 11px; color: var(--text); align-items: baseline; }
+  .cost .r.total b { color: var(--gold); font-family: var(--serif); font-size: 19px; }
+  .warn-line { color: #d97b7b; font-size: 12.5px; margin: 0 0 12px; line-height: 1.6; }
+
+  .shelf-item .thumb { position: relative; }
+
   /* ===== 排单工作台（画师专属） ===== */
   .role-tab { display: none; }
   .role-tab.show { display: inline-block; }
@@ -545,6 +766,9 @@
     .grid.g3 { grid-template-columns: repeat(2, 1fr); }
     .wb { grid-template-columns: 1fr 1fr; }
     .wb-detail { grid-column: span 2; }
+    .workshop { grid-template-columns: 1fr; }
+    .ws-preview { position: static; }
+    .draw-layout { grid-template-columns: 1fr; }
   }
   @media (max-width: 820px) {
     .roles { grid-template-columns: 1fr; }
@@ -555,10 +779,11 @@
     main { padding: 10px 16px 70px; }
     .grid.g4, .grid.g3, .grid.g2 { grid-template-columns: 1fr; }
     .form-grid { grid-template-columns: 1fr; }
-    .form-grid .span3 { grid-column: span 1; }
+    .form-grid .span3, .form-grid .span2 { grid-column: span 1; }
     .wb { grid-template-columns: 1fr; }
     .wb-detail { grid-column: span 1; }
     .wb-board { min-height: auto; }
+    .art-pick, .merch-list { grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
@@ -569,27 +794,27 @@
   <div class="auth-card">
     <div class="brand-line">JI HUA · ART COLLECTIVE</div>
     <h1 class="auth-title">集画</h1>
-    <p class="auth-sub">一个把 <b>画师</b>、<b>商家</b> 与 <b>探索者</b> 聚在一起的创作市集</p>
+    <p class="auth-sub">一个把 <b>创作者</b>、<b>实验家</b> 与 <b>探索者</b> 聚在一起的创作市集</p>
 
-    <div class="role-label">选择你的身份</div>
+    <div class="role-label">选择你的身份（进入后可在顶部右侧自由切换）</div>
     <div class="roles" id="roles">
-      <button class="role" data-role="画师" aria-pressed="false">
+      <button class="role" data-role="创作者" aria-pressed="false">
         <span class="check">✓ 已选择</span>
         <div class="ico">🎨</div>
-        <h3>画师</h3>
-        <p>发布作品、开放约稿档期、上架同人周边</p>
+        <h3>创作者<span class="sub">（画师）</span></h3>
+        <p>绘画创作、发布作品、开放约稿档期、定制周边</p>
       </button>
-      <button class="role" data-role="商家" aria-pressed="false">
+      <button class="role" data-role="实验家" aria-pressed="false">
         <span class="check">✓ 已选择</span>
-        <div class="ico">🏪</div>
-        <h3>商家</h3>
-        <p>经营同人好物店铺、管理库存与订单</p>
+        <div class="ico">🧪</div>
+        <h3>实验家<span class="sub">（商家）</span></h3>
+        <p>承接工艺制品打样量产、经营同人好物店铺</p>
       </button>
       <button class="role" data-role="探索者" aria-pressed="false">
         <span class="check">✓ 已选择</span>
         <div class="ico">🔍</div>
-        <h3>探索者</h3>
-        <p>浏览画作、发起约稿、收藏与购买好物</p>
+        <h3>探索者<span class="sub">（买家）</span></h3>
+        <p>浏览画作、发起约稿、收藏与购买同人好物</p>
       </button>
     </div>
 
@@ -613,12 +838,19 @@
     <div class="logo-mark">集画</div>
     <nav class="nav-tabs" id="tabs">
       <button class="tab active" data-panel="art">画作展示</button>
+      <button class="tab" data-panel="draw">绘画</button>
       <button class="tab" data-panel="commission">约稿界面</button>
       <button class="tab role-tab" data-panel="workbench">排单工作台</button>
+      <button class="tab role-tab" data-panel="custom">周边定制</button>
       <button class="tab" data-panel="goods">同人好物</button>
     </nav>
     <div class="nav-right">
-      <span class="chip">身份：<b id="roleChip">探索者</b></span>
+      <div class="role-switch">
+        <button class="chip role-current" id="roleChipBtn">
+          身份：<b id="roleChip">探索者（买家）</b><span class="caret">▾</span>
+        </button>
+        <div class="role-menu" id="roleMenu"></div>
+      </div>
       <button class="cart" id="cartBtn">🛒 购物车<span class="badge" id="cartBadge">0</span></button>
       <button class="btn ghost sm" id="logoutBtn">退出</button>
     </div>
@@ -652,6 +884,82 @@
       </div>
       <div class="grid g4" id="artGrid"></div>
       <div class="role-note show" id="note-art"></div>
+    </section>
+
+    <!-- ---------- 绘画（三种身份通用） ---------- -->
+    <section class="panel" id="panel-draw">
+      <div class="sec-head">
+        <div>
+          <h2>绘画</h2>
+          <p>基础绘图配置 + 线稿缺口检测 + 动作参考搜索，三种身份都可使用</p>
+        </div>
+        <div class="actions">
+          <button class="btn ghost sm" id="loadSample">载入示例线稿</button>
+          <button class="btn ghost sm" id="clearCanvas">清空画布</button>
+        </div>
+      </div>
+
+      <div class="draw-layout">
+        <div class="draw-main">
+          <div class="toolbar">
+            <button class="tool on" data-tool="pen" title="铅笔">✏️</button>
+            <button class="tool" data-tool="marker" title="马克笔">🖍️</button>
+            <button class="tool" data-tool="airbrush" title="喷枪">💨</button>
+            <button class="tool" data-tool="eraser" title="橡皮">🧽</button>
+            <span class="tb-sep"></span>
+            <div class="tb-group"><span class="lb">粗细</span><input class="tb-input" id="brushSize" type="range" min="1" max="60" value="5" /></div>
+            <div class="tb-group"><span class="lb">不透明度</span><input class="tb-input" id="brushOpacity" type="range" min="5" max="100" value="100" /></div>
+            <div class="tb-group">
+              <span class="lb">颜色</span>
+              <div class="swatches" id="swatches"></div>
+              <input class="tb-input" id="brushColor" type="color" value="#f2ece0" style="width:38px;height:30px;padding:2px" />
+            </div>
+            <span class="tb-sep"></span>
+            <button class="tool" id="undoBtn" title="撤销">↶</button>
+            <button class="tool" id="redoBtn" title="重做">↷</button>
+          </div>
+
+          <div class="canvas-wrap">
+            <canvas id="drawCanvas" width="1000" height="680"></canvas>
+            <canvas id="drawOverlay" width="1000" height="680"></canvas>
+          </div>
+
+          <div class="canvas-tip">
+            <span>画布 <b>1000 × 680</b> · 笔刷 <b id="tipBrush">铅笔 5px</b></span>
+            <span id="tipGap">缺口检测：尚未扫描</span>
+          </div>
+        </div>
+
+        <aside class="draw-side">
+          <div class="side-tabs">
+            <button class="side-tab active" data-pane="gaps">线稿缺口检测</button>
+            <button class="side-tab" data-pane="refs">动作参考搜索</button>
+          </div>
+
+          <div class="side-pane active" id="pane-gaps">
+            <p class="pane-head">缺口扫描</p>
+            <p class="pane-desc">扫描画布中的线条，找出未闭合的线稿断点与开口。点击结果可在画布上定位，或直接「一键闭合」。</p>
+            <div style="display:flex;gap:9px;flex-wrap:wrap">
+              <button class="btn sm" id="scanGaps">开始扫描</button>
+              <button class="btn ghost sm" id="closeAllGaps">一键闭合全部</button>
+            </div>
+            <div class="gap-list" id="gapList">
+              <div class="empty-note">尚未扫描。先画几笔或载入示例线稿，再点击「开始扫描」。</div>
+            </div>
+          </div>
+
+          <div class="side-pane" id="pane-refs">
+            <p class="pane-head">动作参考搜索</p>
+            <p class="pane-desc">输入动作关键词，检索人体动态参考图，附结构要点提示。</p>
+            <div class="ref-search">
+              <input id="refInput" placeholder="搜索动作，如：跳跃 / 持剑 / 回眸" />
+              <button class="btn sm" id="refSearchBtn">搜索</button>
+            </div>
+            <div class="ref-chips" id="refChips"></div>
+            <div id="refBody"></div>
+          </div>
+        </aside>
+      </div>
     </section>
 
     <!-- ---------- 约稿界面 ---------- -->
@@ -708,7 +1016,7 @@
     </section>
 
     <!-- ---------- 排单工作台（画师专属） ---------- -->
-    <section class="panel" id="panel-workbench">
+    <section class="panel artist-only" id="panel-workbench">
       <div class="sec-head">
         <div>
           <h2>排单工作台</h2>
@@ -743,6 +1051,58 @@
           <div class="empty">← 点击左侧买家卡片<br />查看诉求详情与对话</div>
         </aside>
       </div>
+    </section>
+
+    <!-- ---------- 周边定制（画师专属） ---------- -->
+    <section class="panel artist-only" id="panel-custom">
+      <div class="sec-head">
+        <div>
+          <h2>周边定制</h2>
+          <p>选择画作与合作商家，把作品做成亚克力立牌、镭射票等工艺制品，再上架到你的商品橱窗</p>
+        </div>
+        <div class="actions">
+          <button class="btn ghost sm">合作商家招募</button>
+          <button class="btn ghost sm">定制须知</button>
+        </div>
+      </div>
+
+      <div class="workshop">
+        <div class="ws-form">
+          <div class="step">
+            <h4><span class="no">1</span>选择画作</h4>
+            <div class="art-pick" id="artPick"></div>
+          </div>
+
+          <div class="step">
+            <h4><span class="no">2</span>选择工艺</h4>
+            <div class="chips" id="craftPick"></div>
+          </div>
+
+          <div class="step">
+            <h4><span class="no">3</span>选择合作商家</h4>
+            <p class="hint-sm" id="merchHint"></p>
+            <div class="merch-list" id="merchList"></div>
+          </div>
+
+          <div class="step">
+            <h4><span class="no">4</span>定制参数与售价</h4>
+            <div class="form-grid" id="paramGrid"></div>
+          </div>
+        </div>
+
+        <aside class="ws-preview" id="wsPreview"></aside>
+      </div>
+
+      <div class="sec-head" style="margin-top:56px">
+        <div>
+          <h2>我的商品橱窗</h2>
+          <p>定制订单提交后自动入橱窗，可随时上架或下架，上架商品会同步展示在「同人好物」</p>
+        </div>
+        <div class="actions">
+          <button class="btn ghost sm">批量管理</button>
+        </div>
+      </div>
+      <div class="grid g4" id="shelfGrid"></div>
     </section>
 
     <!-- ---------- 同人好物 ---------- -->
@@ -811,9 +1171,19 @@ const goods = [
     img: IMG("set%20of%20acrylic%20keychains%20with%20anime%20character%20art%2C%20close%20up%20product%20photo", "square_hd") }
 ];
 
+/* 身份定义：创作者（画师） / 实验家（商家） / 探索者（买家） */
+const ROLE_DEF = {
+  "创作者": { sub: "画师", ico: "🎨", desc: "绘画创作 / 约稿排单 / 周边定制" },
+  "实验家": { sub: "商家", ico: "🧪", desc: "承接工艺打样量产 / 经营店铺" },
+  "探索者": { sub: "买家", ico: "🔍", desc: "浏览收藏 / 发起约稿 / 购买好物" }
+};
+const roleOrder = ["创作者", "实验家", "探索者"];
+const roleTitle = r => (ROLE_DEF[r] ? r + "（" + ROLE_DEF[r].sub + "）" : r);
+const roleShort = r => (ROLE_DEF[r] ? r + " · " + ROLE_DEF[r].sub : r);
+
 const roleConfig = {
-  "画师":   { art: "你可以在此管理作品集：投稿新作、编辑标签与授权范围。", commission: "你可以在此开放/关闭档期，查看收到的约稿需求并报价。", goods: "你可以在此把画作制作成周边，上架到同人好物展区。", cta: "发布新作品" },
-  "商家":   { art: "浏览画作以挑选适合量产的同人素材，支持导出授权清单。", commission: "可代客户发起批量约稿，支持多张合单与发票。", goods: "你可以在此管理店铺商品、库存与订单发货。", cta: "上架商品" },
+  "创作者": { art: "你可以在此管理作品集：投稿新作、编辑标签与授权范围。", commission: "你可以在此开放/关闭档期，查看收到的约稿需求并报价。", goods: "你可以在此把画作制作成周边，上架到同人好物展区。", cta: "发布新作品" },
+  "实验家": { art: "浏览画作以挑选适合量产的同人素材，支持导出授权清单。", commission: "可代客户发起批量约稿，支持多张合单与发票。", goods: "你可以在此管理店铺商品、库存与订单发货。", cta: "上架商品" },
   "探索者": { art: "浏览并收藏喜欢的画作，点击爱心即可加入收藏夹。", commission: "选择心仪画师，填写下方表单即可发起约稿。", goods: "把喜欢的同人好物加入购物车，结算时统一支付。", cta: "我的收藏" }
 };
 
@@ -894,7 +1264,7 @@ document.querySelectorAll(".role").forEach(btn => {
   btn.addEventListener("click", () => {
     currentRole = btn.dataset.role;
     document.querySelectorAll(".role").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
-    roleEcho.textContent = currentRole;
+    roleEcho.textContent = roleTitle(currentRole);
   });
 });
 
@@ -904,15 +1274,61 @@ document.getElementById("loginBtn").addEventListener("click", () => {
   const nick = document.getElementById("nickname").value.trim();
   if (!nick) { toast("请输入昵称"); return; }
 
-  document.getElementById("roleChip").textContent = currentRole;
+  document.getElementById("roleChip").textContent = roleTitle(currentRole);
   applyRole(currentRole);
-  switchTab(currentRole === "画师" ? "workbench" : "art");
+  renderRoleMenu();
+  switchTab(currentRole === "创作者" ? "workbench" : "art");
 
   const auth = document.getElementById("auth");
   const app = document.getElementById("app");
   auth.classList.add("hide");
   setTimeout(() => { auth.style.display = "none"; app.classList.add("show"); window.scrollTo(0, 0); }, 380);
-  toast("欢迎回来，" + nick + "（" + currentRole + "）");
+  toast("欢迎回来，" + nick + "（" + roleShort(currentRole) + "）");
+});
+
+/* ================= 顶部右侧身份切换器 ================= */
+const roleChipBtn = document.getElementById("roleChipBtn");
+const roleMenu = document.getElementById("roleMenu");
+const roleChip = document.getElementById("roleChip");
+
+function renderRoleMenu() {
+  roleMenu.innerHTML =
+    `<div class="rmhint">身份可随时切换，切换后面板与提示会同步更新</div>` +
+    roleOrder.map(r => `
+      <button class="rm ${r === currentRole ? "on" : ""}" data-role-switch="${r}">
+        <span class="ico">${ROLE_DEF[r].ico}</span>
+        <span>
+          <span class="rn">${r}<span class="sub">（${ROLE_DEF[r].sub}）</span></span>
+          <span class="rs">${ROLE_DEF[r].desc}</span>
+        </span>
+        ${r === currentRole ? '<span class="tick">✓</span>' : ""}
+      </button>`).join("");
+}
+
+function setRole(r) {
+  if (!ROLE_DEF[r] || r === currentRole) { roleMenu.classList.remove("show"); return; }
+  currentRole = r;
+  roleChip.textContent = roleTitle(r);
+  applyRole(r);
+  renderRoleMenu();
+  closeRoleMenu();
+  toast("已切换为 " + roleTitle(r));
+}
+
+function closeRoleMenu() { roleMenu.classList.remove("show"); }
+
+roleChipBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  roleMenu.classList.toggle("show");
+});
+
+roleMenu.addEventListener("click", e => {
+  const item = e.target.closest("[data-role-switch]");
+  if (item) setRole(item.dataset.roleSwitch);
+});
+
+document.addEventListener("click", e => {
+  if (!e.target.closest(".role-switch")) closeRoleMenu();
 });
 
 /* 退出 */
@@ -978,18 +1394,16 @@ function applyRole(role) {
   const map = { "note-art": cfg.art, "note-commission": cfg.commission, "note-goods": cfg.goods };
   Object.entries(map).forEach(([id, text]) => {
     const el = document.getElementById(id);
-    el.innerHTML = "<b>" + role + "视角：</b>" + text;
+    el.innerHTML = "<b>" + roleTitle(role) + "视角：</b>" + text;
     el.classList.add("show");
   });
   const primary = document.querySelectorAll(".sec-head .actions .btn:not(.ghost)");
   primary.forEach(b => { b.textContent = cfg.cta; });
 
-  /* 排单工作台仅对画师开放 */
-  const wbTab = document.querySelector('.tab[data-panel="workbench"]');
-  wbTab.classList.toggle("show", role === "画师");
-  if (role !== "画师" && document.getElementById("panel-workbench").classList.contains("active")) {
-    switchTab("art");
-  }
+  /* 创作者专属板块：排单工作台 / 周边定制 */
+  document.querySelectorAll(".tab.role-tab").forEach(t => t.classList.toggle("show", role === "创作者"));
+  const activePanel = document.querySelector(".panel.active");
+  if (role !== "创作者" && activePanel && activePanel.classList.contains("artist-only")) switchTab("art");
 }
 
 /* ================= 排单工作台（画师） ================= */
@@ -1278,6 +1692,982 @@ wbDetail.addEventListener("keydown", e => {
 });
 
 renderBoards();
+
+/* ================= 周边定制（画师） ================= */
+const crafts = {
+  "亚克力立牌": { ratio: "3 / 4", radius: "10px", sheen: false, sizes: ["A6 · 10×15cm", "A5 · 15×21cm", "异形切割"] },
+  "镭射票":     { ratio: "1 / 2.7", radius: "8px", sheen: true,  sizes: ["58×180mm", "70×200mm"] },
+  "吧唧徽章":   { ratio: "1 / 1", radius: "50%", sheen: false, sizes: ["58mm", "75mm"] },
+  "色纸":       { ratio: "3 / 4", radius: "6px", sheen: false, sizes: ["10×14cm", "12×17cm"] },
+  "亚克力挂件": { ratio: "1 / 1", radius: "16px", sheen: true,  sizes: ["5cm", "7cm"] }
+};
+
+const merchants = [
+  { n: "星野工房", ico: "🏭", s: "亚克力制品 · 6 年", moq: 20, price: 6.5, days: 7, rate: 4.9, sample: 30,
+    crafts: ["亚克力立牌", "亚克力挂件", "吧唧徽章"], note: "自有工厂，支持异形切割与夜光板材" },
+  { n: "镭射周边社", ico: "✨", s: "镭射票 / 色纸", moq: 50, price: 2.8, days: 5, rate: 4.7, sample: 20,
+    crafts: ["镭射票", "色纸"], note: "镭射膜 12 色可选，5 天快速出货" },
+  { n: "光影制品", ico: "🌗", s: "立牌 / 挂件 / 冰箱贴", moq: 10, price: 8.2, days: 10, rate: 4.8, sample: 40,
+    crafts: ["亚克力立牌", "亚克力挂件"], note: "小批量友好，10 件起订，打样免费寄回" },
+  { n: "纸上工坊", ico: "📦", s: "纸制品 / 徽章", moq: 100, price: 1.9, days: 4, rate: 4.6, sample: 15,
+    crafts: ["色纸", "镭射票", "吧唧徽章"], note: "大批量性价比最高，支持专色印刷" }
+];
+
+const packOptions = { "简装（OPP 袋）": 0, "吸塑 + 背卡": 0.8, "精装礼盒": 2.5 };
+
+const shelf = [
+  { id: "s1", art: 0, craft: "亚克力立牌", merchant: "星野工房", qty: 120, unit: 26.5, price: 68, sold: 87, status: "已上架" },
+  { id: "s2", art: 1, craft: "镭射票", merchant: "镭射周边社", qty: 300, unit: 3.6, price: 15, sold: 212, status: "已上架" },
+  { id: "s3", art: 2, craft: "色纸", merchant: "纸上工坊", qty: 100, unit: 2.4, price: 12, sold: 0, status: "生产中" }
+];
+
+const custom = {
+  art: 0, craft: "亚克力立牌", merchant: 0,
+  qty: merchants[0].moq, size: crafts["亚克力立牌"].sizes[0],
+  pack: "简装（OPP 袋）", sample: true, price: 0, priceTouched: false
+};
+
+const panelCustom = document.getElementById("panel-custom");
+const artPick = document.getElementById("artPick");
+const craftPick = document.getElementById("craftPick");
+const merchList = document.getElementById("merchList");
+const merchHint = document.getElementById("merchHint");
+const paramGrid = document.getElementById("paramGrid");
+const wsPreview = document.getElementById("wsPreview");
+const shelfGrid = document.getElementById("shelfGrid");
+
+const money = n => "￥" + (Math.round(n * 100) / 100).toLocaleString("zh-CN");
+const craftMerchants = () => merchants.map((_, i) => i).filter(i => merchants[i].crafts.includes(custom.craft));
+
+function calc() {
+  const m = merchants[custom.merchant];
+  const qty = custom.qty || 0;
+  const packFee = packOptions[custom.pack] || 0;
+  const unit = m.price + packFee;
+  const sampleFee = custom.sample ? m.sample : 0;
+  const total = unit * qty + sampleFee;
+  const revenue = custom.price * qty;
+  return {
+    m, qty, unit, packFee, sampleFee, total, revenue,
+    profit: revenue - total, perItem: qty ? total / qty : 0,
+    days: m.days + (custom.sample ? 3 : 0)
+  };
+}
+
+function renderArtPick() {
+  artPick.innerHTML = artworks.map((w, i) => `
+    <button class="art-opt ${i === custom.art ? "on" : ""}" data-art="${i}">
+      <img src="${w.img}" alt="${w.t}" loading="lazy" />
+      <div class="nm">${w.t}</div>
+    </button>`).join("");
+}
+
+function renderCraftPick() {
+  craftPick.innerHTML = Object.keys(crafts).map(c =>
+    `<button class="chip-opt ${c === custom.craft ? "on" : ""}" data-craft="${c}">${c}</button>`).join("");
+}
+
+function renderMerch() {
+  const list = craftMerchants();
+  merchHint.textContent =
+    "当前工艺「" + custom.craft + "」共 " + list.length + " 家合作商家可承接，单价、起订量与工期各不相同";
+  merchList.innerHTML = list.map(i => {
+    const m = merchants[i];
+    return `
+    <button class="merch ${i === custom.merchant ? "on" : ""}" data-merch="${i}">
+      <div class="mtop">
+        <span class="mav">${m.ico}</span>
+        <div>
+          <div class="mn">${m.n}</div>
+          <div class="ms">${m.s}</div>
+        </div>
+        <span class="star">★ ${m.rate}</span>
+      </div>
+      <div class="mfacts">
+        <span>加工单价 <b>${money(m.price)} / 件</b></span>
+        <span>起订量 <b>${m.moq} 件</b></span>
+        <span>出货工期 <b>${m.days} 天</b></span>
+        <span>打样费 <b>${money(m.sample)} / 版</b></span>
+      </div>
+      <div class="mnote">${m.note}</div>
+    </button>`;
+  }).join("");
+}
+
+function renderParams() {
+  const c = calc();
+  paramGrid.innerHTML = `
+    <div>
+      <label>定制数量（起订 ${c.m.moq} 件）</label>
+      <input id="cQty" type="number" min="1" value="${custom.qty}" />
+    </div>
+    <div>
+      <label>规格尺寸</label>
+      <select id="cSize">${crafts[custom.craft].sizes
+        .map(s => `<option ${s === custom.size ? "selected" : ""}>${s}</option>`).join("")}</select>
+    </div>
+    <div>
+      <label>包装方式</label>
+      <select id="cPack">${Object.keys(packOptions)
+        .map(p => `<option ${p === custom.pack ? "selected" : ""}>${p}</option>`).join("")}</select>
+    </div>
+    <div>
+      <label>橱窗售价（每件）</label>
+      <input id="cPrice" type="number" min="0" value="${custom.price}" />
+    </div>
+    <div class="span2">
+      <label>打样确认</label>
+      <label class="switch">
+        <input type="checkbox" id="cSample" ${custom.sample ? "checked" : ""} />
+        先寄实物打样（+${money(c.m.sample)} / +3 天）
+      </label>
+    </div>`;
+}
+
+function renderPreview() {
+  const c = calc();
+  const art = artworks[custom.art];
+  const cr = crafts[custom.craft];
+  const okQty = c.qty >= c.m.moq;
+  const okPrice = custom.price > c.perItem;
+  wsPreview.innerHTML = `
+    <h3>定制预览</h3>
+    <p class="sub">${art.t} · ${custom.craft} · ${custom.size}</p>
+    <div class="pv-stage">
+      <div class="pv-item" style="aspect-ratio:${cr.ratio};border-radius:${cr.radius}">
+        <img src="${art.img}" alt="${art.t}" />
+        ${cr.sheen ? '<span class="sheen"></span>' : ""}
+      </div>
+    </div>
+    <div class="pv-cap">${c.m.n} 出品 · ${custom.sample ? "含实物打样" : "不打样直接量产"}</div>
+    <div class="cost">
+      <div class="r"><span>加工单价</span><b>${money(c.unit)} × ${c.qty} 件</b></div>
+      <div class="r"><span>包装 · ${custom.pack}</span><b>${money(c.packFee)} / 件</b></div>
+      <div class="r"><span>打样费</span><b>${custom.sample ? money(c.m.sample) : "—"}</b></div>
+      <div class="r"><span>预计工期</span><b>${c.days} 天</b></div>
+      <div class="r"><span>橱窗售价</span><b>${money(custom.price)} × ${c.qty} 件</b></div>
+      <div class="r"><span>预计毛利</span><b style="color:${c.profit >= 0 ? "#8fd9a8" : "#d97b7b"}">${money(c.profit)}</b></div>
+      <div class="r total"><span>定制总成本</span><b>${money(c.total)}</b></div>
+    </div>
+    ${okQty ? "" : `<p class="warn-line">数量未达起订量，请调整到 ${c.m.moq} 件及以上</p>`}
+    ${okPrice ? "" : `<p class="warn-line">售价低于单件成本 ${money(c.perItem)}，建议提价后再上架</p>`}
+    <button class="btn block" id="submitCustom"${okQty ? "" : ' disabled style="opacity:.5;cursor:not-allowed"'}>提交定制并放入橱窗</button>`;
+}
+
+function renderShelf() {
+  shelfGrid.innerHTML = shelf.map(p => {
+    const art = artworks[p.art];
+    const st = { "已上架": "ok", "生产中": "warn", "已下架": "" }[p.status] || "";
+    const label = p.status === "生产中" ? "确认完成并上架" : p.status === "已上架" ? "下架" : "上架售卖";
+    return `
+    <article class="card good shelf-item">
+      <div class="thumb">
+        <img src="${art.img}" alt="${art.t}" loading="lazy" />
+        <span class="hot" style="background:rgba(14,13,16,.78);color:var(--gold);border:1px solid rgba(231,192,120,.35)">${p.craft}</span>
+        <span class="mini-pill ${st}" style="position:absolute;top:12px;left:12px;background:rgba(14,13,16,.82)">${p.status}</span>
+      </div>
+      <div class="body">
+        <h3>${art.t} · ${p.craft}</h3>
+        <p class="sub">${p.merchant} · 库存 ${p.qty} 件 · 成本 ${money(p.unit)} / 件</p>
+        <div class="buy">
+          <span class="p">${money(p.price)}</span>
+          <button class="add" data-shelf="${p.id}">${label}</button>
+        </div>
+        <p class="sub" style="margin:10px 0 0">${p.sold ? "已售 " + p.sold + " 件" : "尚未产生销量"}</p>
+      </div>
+    </article>`;
+  }).join("") || `<div class="empty-note">橱窗还是空的，先在上方完成一次周边定制</div>`;
+}
+
+function renderAll() {
+  renderArtPick();
+  renderCraftPick();
+  renderMerch();
+  if (!custom.priceTouched) custom.price = Math.round(calc().perItem * 2.2);
+  renderParams();
+  renderPreview();
+}
+
+function setCraft(name) {
+  if (name === custom.craft) return;
+  custom.craft = name;
+  custom.size = crafts[name].sizes[0];
+  const list = craftMerchants();
+  if (!list.includes(custom.merchant)) custom.merchant = list[0];
+  custom.qty = merchants[custom.merchant].moq;
+  custom.priceTouched = false;
+  renderAll();
+}
+
+function submitCustom() {
+  const c = calc();
+  if (c.qty < c.m.moq) { toast("定制数量需达到起订量 " + c.m.moq + " 件"); return; }
+  shelf.unshift({
+    id: "s" + Date.now(), art: custom.art, craft: custom.craft, merchant: c.m.n,
+    qty: c.qty, unit: Math.round(c.perItem * 10) / 10, price: custom.price,
+    sold: 0, status: "生产中"
+  });
+  renderShelf();
+  toast("已向 " + c.m.n + " 提交定制订单，预计 " + c.days + " 天出货，商品已放入橱窗");
+  document.getElementById("shelfGrid").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function toggleShelf(id) {
+  const p = shelf.find(x => x.id === id);
+  if (!p) return;
+  if (p.status === "生产中") { p.status = "已上架"; toast("「" + artworks[p.art].t + " · " + p.craft + "」已上架售卖"); }
+  else if (p.status === "已上架") { p.status = "已下架"; toast("已下架，可随时重新上架"); }
+  else { p.status = "已上架"; toast("已重新上架"); }
+  renderShelf();
+}
+
+panelCustom.addEventListener("click", e => {
+  const a = e.target.closest("[data-art]");
+  if (a) { custom.art = +a.dataset.art; renderAll(); return; }
+  const cr = e.target.closest("[data-craft]");
+  if (cr) { setCraft(cr.dataset.craft); return; }
+  const mr = e.target.closest("[data-merch]");
+  if (mr) {
+    const idx = +mr.dataset.merch;
+    if (idx !== custom.merchant) {
+      custom.merchant = idx;
+      custom.qty = merchants[idx].moq;
+      custom.priceTouched = false;
+    }
+    renderAll();
+    return;
+  }
+  if (e.target.id === "submitCustom") { submitCustom(); return; }
+  const sh = e.target.closest("[data-shelf]");
+  if (sh) toggleShelf(sh.dataset.shelf);
+});
+
+panelCustom.addEventListener("input", e => {
+  if (e.target.id === "cQty") { custom.qty = Math.max(0, Math.floor(+e.target.value || 0)); renderPreview(); }
+  if (e.target.id === "cPrice") {
+    custom.price = Math.max(0, +e.target.value || 0);
+    custom.priceTouched = true;
+    renderPreview();
+  }
+});
+
+panelCustom.addEventListener("change", e => {
+  if (e.target.id === "cSize") { custom.size = e.target.value; renderPreview(); }
+  if (e.target.id === "cPack") { custom.pack = e.target.value; renderPreview(); }
+  if (e.target.id === "cSample") { custom.sample = e.target.checked; renderPreview(); }
+});
+
+renderAll();
+renderShelf();
+
+/* ================= 绘画（三种身份通用） ================= */
+const panelDraw = document.getElementById("panel-draw");
+const drawCanvas = document.getElementById("drawCanvas");
+const dctx = drawCanvas.getContext("2d", { willReadFrequently: true });
+const drawOverlay = document.getElementById("drawOverlay");
+const octx = drawOverlay.getContext("2d");
+const CW = drawCanvas.width, CH = drawCanvas.height;
+const swatches = document.getElementById("swatches");
+const gapList = document.getElementById("gapList");
+const tipBrush = document.getElementById("tipBrush");
+const tipGap = document.getElementById("tipGap");
+const refChips = document.getElementById("refChips");
+
+const palette = ["#f2ece0", "#e7c078", "#e88fb1", "#7fa8e8", "#8fd9a8", "#d97b7b", "#8a8095"];
+const toolNames = { pen: "铅笔", marker: "马克笔", airbrush: "喷枪", eraser: "橡皮" };
+const brush = { tool: "pen", size: 5, opacity: 100, color: "#f2ece0" };
+
+let gaps = [], activeGap = null, lastData = null;
+let undoStack = [], redoStack = [];
+const HIST_MAX = 10;
+
+function updateTip() {
+  tipBrush.textContent = toolNames[brush.tool] + " " + brush.size + "px";
+}
+
+function renderSwatches() {
+  swatches.innerHTML = palette.map(c =>
+    `<button class="sw ${c === brush.color ? "on" : ""}" data-sw="${c}" style="background:${c}" title="${c}"></button>`).join("");
+  document.getElementById("brushColor").value = brush.color;
+}
+
+function setColor(c) {
+  brush.color = c;
+  renderSwatches();
+}
+
+function setTool(t) {
+  brush.tool = t;
+  panelDraw.querySelectorAll("[data-tool]").forEach(b => b.classList.toggle("on", b.dataset.tool === t));
+  updateTip();
+}
+
+function setSidePane(name) {
+  panelDraw.querySelectorAll(".side-tab").forEach(b => b.classList.toggle("active", b.dataset.pane === name));
+  document.getElementById("pane-gaps").classList.toggle("active", name === "gaps");
+  document.getElementById("pane-refs").classList.toggle("active", name === "refs");
+}
+
+/* ---------- 画布 / 笔刷 ---------- */
+function canvasPos(e) {
+  const r = drawCanvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * (CW / r.width),
+    y: (e.clientY - r.top) * (CH / r.height)
+  };
+}
+
+function snapshot() {
+  if (undoStack.length >= HIST_MAX) undoStack.shift();
+  undoStack.push(dctx.getImageData(0, 0, CW, CH));
+  redoStack = [];
+}
+
+function restore(img) {
+  dctx.save();
+  dctx.globalCompositeOperation = "source-over";
+  dctx.globalAlpha = 1;
+  dctx.putImageData(img, 0, 0);
+  dctx.restore();
+}
+
+function undo() {
+  if (!undoStack.length) { toast("没有可撤销的操作了"); return; }
+  redoStack.push(dctx.getImageData(0, 0, CW, CH));
+  restore(undoStack.pop());
+  invalidateGaps("已撤销上一步，点击「开始扫描」重新检测缺口。");
+}
+
+function redo() {
+  if (!redoStack.length) { toast("没有可重做的操作了"); return; }
+  undoStack.push(dctx.getImageData(0, 0, CW, CH));
+  restore(redoStack.pop());
+  invalidateGaps("已重做一步，点击「开始扫描」重新检测缺口。");
+}
+
+function applyBrush(ctx) {
+  const op = brush.opacity / 100;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.shadowBlur = 0;
+  if (brush.tool === "eraser") {
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.globalAlpha = op;
+    ctx.strokeStyle = "#000";
+    ctx.fillStyle = "#000";
+  } else {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = brush.tool === "marker" ? op * 0.5 : brush.tool === "airbrush" ? op * 0.12 : op;
+    ctx.strokeStyle = brush.color;
+    ctx.fillStyle = brush.color;
+  }
+  ctx.lineWidth = brush.size;
+}
+
+function dotAt(p) {
+  dctx.save();
+  applyBrush(dctx);
+  dctx.beginPath();
+  dctx.arc(p.x, p.y, Math.max(0.6, brush.size / 2), 0, Math.PI * 2);
+  dctx.fill();
+  dctx.restore();
+}
+
+function strokeTo(a, b) {
+  dctx.save();
+  applyBrush(dctx);
+  if (brush.tool === "airbrush") {
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    const steps = Math.max(1, Math.round(dist / 3));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = a.x + (b.x - a.x) * t;
+      const y = a.y + (b.y - a.y) * t;
+      for (let k = 0; k < 4; k++) {
+        const ang = Math.random() * Math.PI * 2;
+        const rad = Math.random() * brush.size * 0.8;
+        dctx.beginPath();
+        dctx.arc(x + Math.cos(ang) * rad, y + Math.sin(ang) * rad, brush.size * 0.35, 0, Math.PI * 2);
+        dctx.fill();
+      }
+    }
+  } else {
+    dctx.beginPath();
+    dctx.moveTo(a.x, a.y);
+    dctx.lineTo(b.x, b.y);
+    dctx.stroke();
+  }
+  dctx.restore();
+}
+
+function invalidateGaps(msg) {
+  gaps = [];
+  activeGap = null;
+  octx.clearRect(0, 0, CW, CH);
+  lastData = null;
+  gapList.innerHTML = `<div class="empty-note">${msg || "画布已修改，点击「开始扫描」重新检测缺口。"}</div>`;
+  tipGap.textContent = "缺口检测：尚未扫描";
+}
+
+function clearCanvas() {
+  snapshot();
+  dctx.clearRect(0, 0, CW, CH);
+  invalidateGaps("画布已清空。画几笔或载入示例线稿，再点击「开始扫描」。");
+  toast("画布已清空");
+}
+
+function loadSample() {
+  snapshot();
+  dctx.clearRect(0, 0, CW, CH);
+  dctx.save();
+  dctx.globalCompositeOperation = "source-over";
+  dctx.globalAlpha = 1;
+  dctx.strokeStyle = "#f2ece0";
+  dctx.lineWidth = 4;
+  dctx.lineCap = "round";
+  dctx.lineJoin = "round";
+
+  /* 1. 缺口圆 */
+  dctx.beginPath();
+  dctx.arc(220, 200, 100, 0.4, Math.PI * 2 - 0.21);
+  dctx.stroke();
+
+  /* 2. 方框右侧缺一小段（同一条线，闭合回起点） */
+  dctx.beginPath();
+  dctx.moveTo(400, 110); dctx.lineTo(600, 110); dctx.lineTo(600, 280);
+  dctx.moveTo(600, 300); dctx.lineTo(600, 330); dctx.lineTo(400, 330); dctx.lineTo(400, 110);
+  dctx.stroke();
+
+  /* 3. 完整闭合三角（不应被判定为缺口） */
+  dctx.beginPath();
+  dctx.moveTo(760, 130); dctx.lineTo(880, 330); dctx.lineTo(640, 330); dctx.closePath();
+  dctx.stroke();
+
+  /* 4. 同圆上的两段弧，端点接近但未连接 */
+  dctx.beginPath(); dctx.arc(230, 470, 90, Math.PI * 0.16, Math.PI * 0.96); dctx.stroke();
+  dctx.beginPath(); dctx.arc(230, 470, 90, Math.PI * 1.04, Math.PI * 1.86); dctx.stroke();
+
+  /* 5. 直线上缺一小段 */
+  dctx.beginPath();
+  dctx.moveTo(440, 470); dctx.lineTo(575, 470);
+  dctx.moveTo(590, 470); dctx.lineTo(720, 470);
+  dctx.stroke();
+
+  dctx.restore();
+  invalidateGaps("已载入示例线稿，点击「开始扫描」体验缺口检测。");
+  toast("已载入示例线稿（内含多处故意留下的未闭合缺口）");
+}
+
+let drawing = false, lastPt = null;
+
+drawCanvas.addEventListener("pointerdown", e => {
+  const p = canvasPos(e);
+  const hit = hitGap(p);
+  if (hit >= 0) { selectGap(hit); return; }
+  drawCanvas.setPointerCapture(e.pointerId);
+  drawing = true;
+  lastPt = p;
+  snapshot();
+  invalidateGaps();
+  dotAt(p);
+});
+
+drawCanvas.addEventListener("pointermove", e => {
+  if (!drawing) return;
+  const p = canvasPos(e);
+  strokeTo(lastPt, p);
+  lastPt = p;
+});
+
+["pointerup", "pointercancel", "pointerleave"].forEach(ev =>
+  drawCanvas.addEventListener(ev, () => { drawing = false; lastPt = null; }));
+
+/* ---------- 线稿缺口检测 ---------- */
+const N8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+
+function nbList(g, w, h, x, y) {
+  const out = [];
+  for (let k = 0; k < 8; k++) {
+    const nx = x + N8[k][0], ny = y + N8[k][1];
+    if (nx >= 0 && ny >= 0 && nx < w && ny < h && g[ny * w + nx]) out.push(ny * w + nx);
+  }
+  return out;
+}
+
+/* Zhang-Suen 细化 */
+function thin(src, w, h) {
+  const g = src.slice();
+  let changed = true, iter = 0;
+  while (changed && iter < 14) {
+    changed = false;
+    for (let step = 0; step < 2; step++) {
+      const del = [];
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const i = y * w + x;
+          if (!g[i]) continue;
+          const p2 = g[i - w], p3 = g[i - w + 1], p4 = g[i + 1], p5 = g[i + w + 1],
+                p6 = g[i + w], p7 = g[i + w - 1], p8 = g[i - 1], p9 = g[i - w - 1];
+          const B = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+          if (B < 2 || B > 6) continue;
+          const A = (p2 && !p3 ? 1 : 0) + (p3 && !p4 ? 1 : 0) + (p4 && !p5 ? 1 : 0) + (p5 && !p6 ? 1 : 0) +
+                    (p6 && !p7 ? 1 : 0) + (p7 && !p8 ? 1 : 0) + (p8 && !p9 ? 1 : 0) + (p9 && !p2 ? 1 : 0);
+          if (A !== 1) continue;
+          if (step === 0) { if (p2 * p4 * p6 || p4 * p6 * p8) continue; }
+          else { if (p2 * p4 * p8 || p2 * p6 * p8) continue; }
+          del.push(i);
+        }
+      }
+      if (del.length) { for (const i of del) g[i] = 0; changed = true; }
+    }
+    iter++;
+  }
+  return g;
+}
+
+function labelComps(g, w, h) {
+  const lab = new Int32Array(w * h);
+  const size = [];
+  let cur = 0;
+  for (let i = 0; i < w * h; i++) {
+    if (!g[i] || lab[i]) continue;
+    cur++;
+    let cnt = 0;
+    const stack = [i];
+    lab[i] = cur;
+    while (stack.length) {
+      const p = stack.pop();
+      cnt++;
+      const x = p % w, y = (p - x) / w;
+      for (const nb of nbList(g, w, h, x, y)) {
+        if (!lab[nb]) { lab[nb] = cur; stack.push(nb); }
+      }
+    }
+    size[cur] = cnt;
+  }
+  return { lab, size };
+}
+
+/* 沿骨架的测地距离（×10 存储，正交步 10 / 对角步 14） */
+function geoDist(g, w, h, start, limit) {
+  const dist = new Int16Array(w * h).fill(32000);
+  dist[start] = 0;
+  let front = [start];
+  while (front.length) {
+    const next = [];
+    for (const p of front) {
+      const d = dist[p];
+      const x = p % w, y = (p - x) / w;
+      const cap = d + 14;
+      if (cap > limit) continue;
+      for (const nb of nbList(g, w, h, x, y)) {
+        const nx = nb % w, ny = (nb - nx) / w;
+        const step = (nx !== x && ny !== y) ? 14 : 10;
+        const nd = d + step;
+        if (nd < dist[nb]) { dist[nb] = nd; next.push(nb); }
+      }
+    }
+    front = next;
+  }
+  return dist;
+}
+
+function scanGaps() {
+  const img = dctx.getImageData(0, 0, CW, CH);
+  lastData = img.data;
+
+  const scale = 2, w = Math.floor(CW / scale), h = Math.floor(CH / scale);
+  const grid = new Uint8Array(w * h);
+  let ink = 0;
+  for (let y = 0; y < CH; y++) {
+    const yy = Math.floor(y / scale) * w;
+    for (let x = 0; x < CW; x++) {
+      if (img.data[(y * CW + x) * 4 + 3] > 60) { grid[yy + Math.floor(x / scale)] = 1; ink++; }
+    }
+  }
+  if (ink < 20) {
+    gaps = []; activeGap = null;
+    octx.clearRect(0, 0, CW, CH);
+    gapList.innerHTML = `<div class="empty-note">画布几乎是空的，先画几笔或载入示例线稿再扫描。</div>`;
+    tipGap.textContent = "缺口检测：未发现线条";
+    return;
+  }
+
+  const sk = thin(grid, w, h);
+  let skCount = 0;
+  for (let i = 0; i < w * h; i++) if (sk[i]) skCount++;
+
+  const { lab, size } = labelComps(sk, w, h);
+
+  /* 端点：8 邻域内仅 1 个邻居的骨架点 */
+  const eps = [];
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      if (!sk[i]) continue;
+      if (nbList(sk, w, h, x, y).length !== 1) continue;
+      if ((size[lab[i]] || 0) < 3) continue;   /* 过滤噪点细碎连通域 */
+      eps.push({ i, x, y, comp: lab[i] });
+    }
+  }
+
+  /* 两级阈值：d1 抓「断点」（细小断裂），d2 抓「开口」（较大的未闭合缺口） */
+  const tiers = [{ d: 16, kind: "断点" }, { d: 60, kind: "开口", mutual: true }];
+  const used = new Set();
+  gaps = [];
+  const lineW = skCount ? ink / (skCount * scale) : 3;
+
+  for (const tier of tiers) {
+    const limit = tier.d * 34;
+
+    /* 开口级只在「互为最近端点」时配对，避免端点密集处产生大量误报 */
+    let nearest = null;
+    if (tier.mutual) {
+      nearest = new Int32Array(eps.length).fill(-1);
+      for (let a = 0; a < eps.length; a++) {
+        if (used.has(a)) continue;
+        let best = -1, bd = Infinity;
+        for (let b = 0; b < eps.length; b++) {
+          if (b === a || used.has(b)) continue;
+          const d2 = Math.hypot(eps[a].x - eps[b].x, eps[a].y - eps[b].y);
+          if (d2 < bd) { bd = d2; best = b; }
+        }
+        nearest[a] = best;
+      }
+    }
+
+    const pairs = [];
+    for (let a = 0; a < eps.length; a++) {
+      if (used.has(a)) continue;
+      const A = eps[a];
+      const dist = geoDist(sk, w, h, A.i, limit);
+      for (let b = a + 1; b < eps.length; b++) {
+        if (used.has(b)) continue;
+        if (tier.mutual && (nearest[a] !== b || nearest[b] !== a)) continue;
+        const B = eps[b];
+        const eu = Math.hypot(A.x - B.x, A.y - B.y) * 10;
+        if (eu > tier.d * 10) continue;
+        const gd = dist[B.i];
+        const far = gd >= 32000 || gd > eu * 3.2;
+        if (!far) continue;   /* 沿骨架本来就相连（如直线自身两端）→ 不算缺口 */
+        pairs.push({ a, b, eu });
+      }
+    }
+
+    pairs.sort((p, q) => p.eu - q.eu);
+    for (const p of pairs) {
+      if (used.has(p.a) || used.has(p.b)) continue;
+      used.add(p.a); used.add(p.b);
+      const A = eps[p.a], B = eps[p.b];
+      const gsize = (p.eu / 10) * scale;
+      gaps.push({
+        ax: (A.x + 0.5) * scale, ay: (A.y + 0.5) * scale,
+        bx: (B.x + 0.5) * scale, by: (B.y + 0.5) * scale,
+        size: Math.round(gsize),
+        width: Math.max(2, Math.round(lineW)),
+        sev: gsize <= 10 ? 1 : gsize <= 22 ? 2 : 3,
+        kind: tier.kind,
+        comp: A.comp
+      });
+    }
+  }
+  gaps.sort((x, y) => x.ay - y.ay || x.ax - y.ax);
+
+  activeGap = null;
+  renderGapList();
+  drawOverlayGaps();
+  tipGap.textContent = gaps.length
+    ? "缺口检测：发现 " + gaps.length + " 处未闭合缺口"
+    : "缺口检测：未发现未闭合的断点";
+}
+
+const SEV = { 1: ["轻微", "s1"], 2: ["中等", "s2"], 3: ["明显", "s3"] };
+
+function renderGapList() {
+  if (!gaps.length) {
+    gapList.innerHTML = `<div class="empty-note">扫描完成，未发现未闭合的线稿断点。线条看起来是完整闭合的。</div>`;
+    return;
+  }
+  gapList.innerHTML = gaps.map((g, i) => {
+    const [txt, cls] = SEV[g.sev];
+    return `
+    <div class="gap-item ${i === activeGap ? "on" : ""}" data-gap="${i}">
+      <div class="gt">
+        <span class="sev ${cls}">${txt}</span>
+        <span>${g.kind} #${i + 1}</span>
+        <span class="gm">间距 ${g.size}px</span>
+      </div>
+      <div class="gd">
+        位置 (${Math.round(g.ax)}, ${Math.round(g.ay)}) → (${Math.round(g.bx)}, ${Math.round(g.by)})，
+        两端点接近但线条未连上，建议补线或直接闭合。
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn sm" data-close-gap="${i}">闭合此处</button>
+        <button class="btn ghost sm" data-locate-gap="${i}">在画布上定位</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function drawOverlayGaps() {
+  octx.clearRect(0, 0, CW, CH);
+  gaps.forEach((g, i) => {
+    const on = i === activeGap;
+    octx.save();
+    octx.strokeStyle = on ? "rgba(231,192,120,.95)" : "rgba(217,123,123,.85)";
+    octx.lineWidth = on ? 3 : 2;
+    octx.setLineDash([7, 6]);
+    octx.beginPath();
+    octx.moveTo(g.ax, g.ay);
+    octx.lineTo(g.bx, g.by);
+    octx.stroke();
+    octx.setLineDash([]);
+
+    [[g.ax, g.ay], [g.bx, g.by]].forEach(([x, y]) => {
+      octx.beginPath();
+      octx.arc(x, y, on ? 14 : 11, 0, Math.PI * 2);
+      octx.strokeStyle = on ? "#e7c078" : "rgba(217,123,123,.9)";
+      octx.lineWidth = 2;
+      octx.stroke();
+      octx.beginPath();
+      octx.arc(x, y, 3, 0, Math.PI * 2);
+      octx.fillStyle = on ? "#e7c078" : "#d97b7b";
+      octx.fill();
+    });
+
+    if (on) {
+      const mx = (g.ax + g.bx) / 2, my = (g.ay + g.by) / 2;
+      const label = "缺口 #" + (i + 1) + " · " + g.size + "px";
+      octx.font = "600 13px system-ui, -apple-system, sans-serif";
+      const tw = octx.measureText(label).width;
+      octx.fillStyle = "rgba(14,13,16,.86)";
+      octx.strokeStyle = "rgba(231,192,120,.6)";
+      octx.lineWidth = 1;
+      const bx = mx - tw / 2 - 9, by = my - 12;
+      octx.beginPath();
+      octx.rect(bx, by, tw + 18, 24);
+      octx.fill();
+      octx.stroke();
+      octx.fillStyle = "#e7c078";
+      octx.textAlign = "left";
+      octx.textBaseline = "middle";
+      octx.fillText(label, bx + 9, by + 12);
+    }
+    octx.restore();
+  });
+}
+
+function hitGap(p) {
+  const R = 26;
+  for (let i = 0; i < gaps.length; i++) {
+    const g = gaps[i];
+    const d1 = Math.hypot(p.x - g.ax, p.y - g.ay);
+    const d2 = Math.hypot(p.x - g.bx, p.y - g.by);
+    const dm = Math.hypot(p.x - (g.ax + g.bx) / 2, p.y - (g.ay + g.by) / 2);
+    if (d1 < R || d2 < R || dm < R) return i;
+  }
+  return -1;
+}
+
+function selectGap(i) {
+  if (i < 0 || i >= gaps.length) return;
+  activeGap = i;
+  renderGapList();
+  drawOverlayGaps();
+  const g = gaps[i];
+  tipGap.textContent = "已选中" + g.kind + " #" + (i + 1) + "：两端相距 " + g.size + "px，点击「闭合此处」或直接补线";
+}
+
+function sampleColor(x, y) {
+  if (!lastData) return brush.color;
+  for (let rad = 0; rad <= 10; rad += 2) {
+    for (let dy = -rad; dy <= rad; dy++) {
+      for (let dx = -rad; dx <= rad; dx++) {
+        const px = Math.round(x + dx), py = Math.round(y + dy);
+        if (px < 0 || py < 0 || px >= CW || py >= CH) continue;
+        const k = (py * CW + px) * 4;
+        if (lastData[k + 3] > 60) return "rgb(" + lastData[k] + "," + lastData[k + 1] + "," + lastData[k + 2] + ")";
+      }
+    }
+  }
+  return brush.color;
+}
+
+function drawClose(g) {
+  dctx.save();
+  dctx.globalCompositeOperation = "source-over";
+  dctx.globalAlpha = 1;
+  dctx.strokeStyle = sampleColor(g.ax, g.ay);
+  dctx.lineWidth = Math.max(2, g.width);
+  dctx.lineCap = "round";
+  dctx.beginPath();
+  dctx.moveTo(g.ax, g.ay);
+  dctx.lineTo(g.bx, g.by);
+  dctx.stroke();
+  dctx.restore();
+}
+
+function closeGap(g) {
+  if (!g) return;
+  snapshot();
+  drawClose(g);
+  toast("已闭合断点，正在重新扫描…");
+  scanGaps();
+}
+
+function closeAllGaps() {
+  if (!gaps.length) { toast("当前没有待闭合的缺口，先点击「开始扫描」"); return; }
+  snapshot();
+  const list = gaps.slice();
+  list.forEach(drawClose);
+  toast("已一键闭合 " + list.length + " 处缺口");
+  scanGaps();
+}
+
+/* ---------- 动作参考搜索 ---------- */
+const poseRefs = [
+  { id: "p1", t: "立姿持剑", cat: "持剑", tags: ["站姿", "持剑", "武器"],
+    notes: "三点支撑：前脚跟、后脚掌与剑尖落点构成稳定三角。持剑手肘微曲，剑身中线与视线平行；另一手虚扶剑柄以平衡重心。起稿先定骨盆与胸腔两块朝向，再补四肢。",
+    img: IMG("reference%20photo%20of%20a%20standing%20figure%20holding%20a%20sword%2C%20full%20body%20pose%20reference%20for%20artists%2C%20plain%20background", "portrait_4_3") },
+  { id: "p2", t: "坐姿抱膝", cat: "坐姿", tags: ["坐姿", "情绪"],
+    notes: "重心压在坐骨，脊柱呈自然 C 形。膝盖高于髋部时显得放松与脆弱；手臂环抱小腿，脚掌外翻，注意大腿与小腿的透视压缩关系。",
+    img: IMG("reference%20photo%20of%20a%20person%20sitting%20and%20hugging%20knees%2C%20full%20body%20pose%20reference%20for%20artists", "portrait_4_3") },
+  { id: "p3", t: "跳跃腾空", cat: "跳跃", tags: ["跳跃", "动态", "腾空"],
+    notes: "先画抛物线的重心轨迹，再补四肢。膝与肘向身体中线收拢形成动态 C 形，头发与衣摆顺重力反方向拉伸，画面张力最强的一帧通常在最高点之前。",
+    img: IMG("reference%20photo%20of%20a%20person%20jumping%20in%20mid%20air%2C%20dynamic%20full%20body%20pose%20reference", "portrait_4_3") },
+  { id: "p4", t: "奔跑冲刺", cat: "奔跑", tags: ["奔跑", "动态", "运动"],
+    notes: "交叉对侧协调：右腿前伸时左臂前摆。躯干前倾 15–20°，支撑腿蹬地时小腿近乎垂直地面，肩线与髋线反向扭转是力量感的来源。",
+    img: IMG("reference%20photo%20of%20a%20person%20sprinting%20running%2C%20dynamic%20full%20body%20pose%20reference", "portrait_4_3") },
+  { id: "p5", t: "回眸侧身", cat: "回眸", tags: ["回眸", "站姿", "情绪"],
+    notes: "头颈先转、躯干后转，形成颈部扭转线。耳朵与下颌的连线可校验透视；回眸时一侧锁骨抬高，肩线呈斜向，注意不要把头画成正脸。",
+    img: IMG("reference%20photo%20of%20a%20person%20turning%20head%20looking%20back%20over%20shoulder%2C%20pose%20reference", "portrait_4_3") },
+  { id: "p6", t: "倚墙而立", cat: "倚靠", tags: ["倚靠", "站姿", "场景"],
+    notes: "接触点通常只有肩背与髋侧。髋部外顶、双腿一屈一直，身体呈柔和的 S 线；手臂可插兜或撑墙形成支点，重心落在支撑腿。",
+    img: IMG("reference%20photo%20of%20a%20person%20leaning%20against%20a%20wall%2C%20full%20body%20pose%20reference", "portrait_4_3") },
+  { id: "p7", t: "撑伞伫立", cat: "站姿", tags: ["站姿", "道具", "氛围"],
+    notes: "举伞手肩部上提形成斜方肌轮廓；伞面倾斜约 20° 可增强叙事感。另一手自然垂放或提物，注意伞骨的透视线与手腕的受力方向一致。",
+    img: IMG("reference%20photo%20of%20a%20person%20standing%20holding%20an%20umbrella%2C%20full%20body%20pose%20reference", "portrait_4_3") },
+  { id: "p8", t: "握剑对峙", cat: "持剑", tags: ["站姿", "持剑", "双人", "武器"],
+    notes: "双方间距约两人宽，剑尖交于一点形成视觉焦点。双肩下沉、重心后压；两人的透视线必须一致，避免一边俯视一边平视。",
+    img: IMG("reference%20photo%20of%20two%20people%20holding%20swords%20facing%20each%20other%2C%20dynamic%20pose%20reference", "portrait_4_3") }
+];
+
+let refChip = "全部", refQuery = "", refOpen = null;
+const refFav = new Set();
+
+function renderRefChips() {
+  const cats = ["全部", ...new Set(poseRefs.map(r => r.cat))];
+  refChips.innerHTML = cats.map(c =>
+    `<button data-refchip="${c}" class="${c === refChip ? "on" : ""}">${c}</button>`).join("");
+}
+
+function refList() {
+  const q = refQuery.trim().toLowerCase();
+  return poseRefs.filter(r => {
+    if (refChip !== "全部" && r.cat !== refChip) return false;
+    if (!q) return true;
+    return (r.t + " " + r.cat + " " + r.tags.join(" ") + " " + r.notes).toLowerCase().includes(q);
+  });
+}
+
+function renderRefBody() {
+  const box = document.getElementById("refBody");
+  const r = refOpen ? poseRefs.find(x => x.id === refOpen) : null;
+  if (r) {
+    box.innerHTML = `
+      <div class="ref-detail">
+        <img src="${r.img}" alt="${r.t}" />
+        <h4>${r.t}</h4>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px">
+          ${r.tags.map(t => `<span class="tag-pill"># ${t}</span>`).join("")}
+        </div>
+        <div class="notes">${r.notes}</div>
+        <div class="meta">分类：${r.cat} · 关键词：${r.tags.join(" / ")}</div>
+        <div style="display:flex;gap:9px;margin-top:14px">
+          <button class="btn ghost sm" id="refBack">← 返回结果</button>
+          <button class="btn ghost sm" data-fav="${r.id}">${refFav.has(r.id) ? "★ 已收藏" : "☆ 收藏参考"}</button>
+        </div>
+      </div>`;
+    return;
+  }
+  const list = refList();
+  if (!list.length) {
+    box.innerHTML = `<div class="empty-note">没有匹配的动作参考，换个关键词或点「全部」试试</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="ref-grid">` + list.map(x => `
+    <button class="ref-card" data-ref="${x.id}">
+      <img src="${x.img}" alt="${x.t}" loading="lazy" />
+      <div class="rt">${x.t}
+        <div class="rtags">${x.tags.map(t => `<span class="tag-pill"># ${t}</span>`).join("")}</div>
+      </div>
+    </button>`).join("") + `</div>`;
+}
+
+function doRefSearch() {
+  refQuery = document.getElementById("refInput").value;
+  refOpen = null;
+  renderRefBody();
+  const n = refList().length;
+  toast(n ? "找到 " + n + " 条动作参考" : "没有匹配的动作参考");
+}
+
+function openRef(id) {
+  refOpen = id;
+  renderRefBody();
+}
+
+function toggleFav(id) {
+  if (refFav.has(id)) { refFav.delete(id); toast("已取消收藏"); }
+  else { refFav.add(id); toast("已收藏该动作参考"); }
+  renderRefBody();
+}
+
+/* ---------- 绘画面板事件 ---------- */
+panelDraw.addEventListener("click", e => {
+  const sw = e.target.closest("[data-sw]");
+  if (sw) { setColor(sw.dataset.sw); return; }
+  const tl = e.target.closest("[data-tool]");
+  if (tl) { setTool(tl.dataset.tool); return; }
+  const st = e.target.closest(".side-tab");
+  if (st) { setSidePane(st.dataset.pane); return; }
+  const cg = e.target.closest("[data-close-gap]");
+  if (cg) { closeGap(gaps[+cg.dataset.closeGap]); return; }
+  const lg = e.target.closest("[data-locate-gap]");
+  if (lg) { selectGap(+lg.dataset.locateGap); return; }
+  const gi = e.target.closest("[data-gap]");
+  if (gi) { selectGap(+gi.dataset.gap); return; }
+  const ch = e.target.closest("[data-refchip]");
+  if (ch) { refChip = ch.dataset.refchip; renderRefChips(); renderRefBody(); return; }
+  const rc = e.target.closest("[data-ref]");
+  if (rc) { openRef(rc.dataset.ref); return; }
+  if (e.target.id === "refBack") { refOpen = null; renderRefBody(); return; }
+  const fv = e.target.closest("[data-fav]");
+  if (fv) { toggleFav(fv.dataset.fav); return; }
+  if (e.target.id === "scanGaps") { scanGaps(); return; }
+  if (e.target.id === "closeAllGaps") { closeAllGaps(); return; }
+  if (e.target.id === "loadSample") { loadSample(); return; }
+  if (e.target.id === "clearCanvas") { clearCanvas(); return; }
+  if (e.target.id === "undoBtn") { undo(); return; }
+  if (e.target.id === "redoBtn") { redo(); return; }
+  if (e.target.id === "refSearchBtn") { doRefSearch(); return; }
+});
+
+panelDraw.addEventListener("input", e => {
+  if (e.target.id === "brushSize") { brush.size = +e.target.value; updateTip(); }
+  else if (e.target.id === "brushOpacity") { brush.opacity = +e.target.value; updateTip(); }
+  else if (e.target.id === "brushColor") setColor(e.target.value);
+});
+
+panelDraw.addEventListener("keydown", e => {
+  if (e.target.id === "refInput" && e.key === "Enter") { e.preventDefault(); doRefSearch(); }
+});
+
+renderSwatches();
+updateTip();
+renderRefChips();
+renderRefBody();
+renderRoleMenu();
 </script>
 </body>
 </html>
