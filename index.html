@@ -525,6 +525,54 @@
   .ref-detail h4 { margin: 13px 0 6px; font-family: var(--serif); font-size: 17px; }
   .ref-detail .notes { font-size: 12.5px; color: #c9c3d4; line-height: 1.8; }
   .ref-detail .meta { color: var(--muted); font-size: 11.5px; margin-top: 10px; }
+  .ref-detail .ref-anim { width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #14131c; display: block; margin-top: 4px; }
+
+  /* ===== 闭合历史 / 撤回 ===== */
+  .closed-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; font-size: 12px;
+  }
+  .closed-item .cmeta { color: var(--muted); }
+  .closed-item button { padding: 3px 8px; font-size: 11px; }
+
+  /* ===== AI 动作顾问 ===== */
+  .ai-chat { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
+  .ai-messages {
+    max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; padding-right: 4px;
+  }
+  .ai-msg { padding: 10px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.7; }
+  .ai-msg.u { background: rgba(127,168,232,.16); align-self: flex-end; max-width: 82%; }
+  .ai-msg.a { background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+  .ai-msg .ai-head { color: var(--gold); font-size: 11px; margin-bottom: 5px; font-weight: 600; }
+  .ai-msg .ai-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .ai-msg .ai-imgs img { border-radius: 10px; border: 1px solid var(--line); aspect-ratio: 3/4; cursor: pointer; }
+  .ai-msg .ai-imgs img:hover { border-color: var(--gold); }
+  .ai-msg .ai-anim { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: #14131c; margin: 8px 0; }
+  .ai-msg .send-ref {
+    display: inline-block; margin-top: 8px; border: 1px dashed rgba(231,192,120,.5);
+    border-radius: 8px; padding: 5px 10px; color: var(--gold); cursor: pointer; font-size: 11.5px; background: transparent;
+  }
+  .ai-msg .send-ref:hover { background: rgba(231,192,120,.1); }
+  .ai-msg ul { margin: 6px 0 6px 18px; padding: 0; }
+  .ai-msg li { margin: 2px 0; }
+  .ai-input { display: flex; gap: 8px; }
+  .ai-input input {
+    flex: 1; background: rgba(14,13,16,.6); border: 1px solid var(--line); border-radius: 11px;
+    padding: 10px 12px; color: var(--text); font-size: 13px; outline: none; font-family: inherit;
+  }
+  .ai-input input:focus { border-color: rgba(231,192,120,.55); }
+
+  /* ===== 通用弹框 ===== */
+  .modal {
+    position: fixed; inset: 0; background: rgba(8,7,10,.72); display: flex; align-items: center; justify-content: center;
+    z-index: 200; backdrop-filter: blur(3px);
+  }
+  .modal-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .modal-card h3 { font-family: var(--serif); }
+
 
   /* ===== 周边定制（画师专属） ===== */
   .workshop { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; align-items: start; }
@@ -896,6 +944,8 @@
         <div class="actions">
           <button class="btn ghost sm" id="loadSample">载入示例线稿</button>
           <button class="btn ghost sm" id="clearCanvas">清空画布</button>
+          <button class="btn ghost sm" id="importImgBtn">导入图片</button>
+          <input type="file" id="importImgInput" accept="image/*" style="display:none" />
         </div>
       </div>
 
@@ -906,13 +956,18 @@
             <button class="tool" data-tool="marker" title="马克笔">🖍️</button>
             <button class="tool" data-tool="airbrush" title="喷枪">💨</button>
             <button class="tool" data-tool="eraser" title="橡皮">🧽</button>
+            <button class="tool" data-tool="wand" title="魔棒填色">🪄</button>
             <span class="tb-sep"></span>
             <div class="tb-group"><span class="lb">粗细</span><input class="tb-input" id="brushSize" type="range" min="1" max="60" value="5" /></div>
             <div class="tb-group"><span class="lb">不透明度</span><input class="tb-input" id="brushOpacity" type="range" min="5" max="100" value="100" /></div>
             <div class="tb-group">
               <span class="lb">颜色</span>
               <div class="swatches" id="swatches"></div>
-              <input class="tb-input" id="brushColor" type="color" value="#f2ece0" style="width:38px;height:30px;padding:2px" />
+              <input class="tb-input" id="brushColor" type="color" value="#f2ece0" style="width:38px;height:30px;padding:2px" title="画笔颜色" />
+            </div>
+            <div class="tb-group">
+              <span class="lb">填充</span>
+              <input class="tb-input" id="fillColor" type="color" value="#7fa8e8" style="width:38px;height:30px;padding:2px" title="魔棒填充色" />
             </div>
             <span class="tb-sep"></span>
             <button class="tool" id="undoBtn" title="撤销">↶</button>
@@ -920,8 +975,16 @@
           </div>
 
           <div class="canvas-wrap">
+            <img id="drawUnderlay" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.5;pointer-events:none;display:none" />
             <canvas id="drawCanvas" width="1000" height="680"></canvas>
             <canvas id="drawOverlay" width="1000" height="680"></canvas>
+            <div id="refPreview" style="position:absolute;top:10px;right:10px;width:150px;background:rgba(14,13,16,.82);border:1px solid rgba(231,192,120,.5);border-radius:8px;overflow:hidden;display:none;backdrop-filter:blur(4px)">
+              <img id="refPreviewImg" style="width:100%;display:block" />
+              <div style="padding:6px 8px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center">
+                <span id="refPreviewLabel">参考图</span>
+                <button class="btn ghost sm" id="refPreviewClose" style="padding:1px 6px;font-size:11px">✕</button>
+              </div>
+            </div>
           </div>
 
           <div class="canvas-tip">
@@ -938,7 +1001,14 @@
 
           <div class="side-pane active" id="pane-gaps">
             <p class="pane-head">缺口扫描</p>
-            <p class="pane-desc">扫描画布中的线条，找出未闭合的线稿断点与开口。点击结果可在画布上定位，或直接「一键闭合」。</p>
+            <p class="pane-desc">扫描画布中的线条，找出未闭合的线稿断点与开口。检测到的缺口会用<span class="sev s2" style="display:inline-flex;vertical-align:middle">曲线</span>自动连接，过大的缺口会提示手动绘制。</p>
+
+            <div class="tb-group" style="margin:10px 0">
+              <span class="lb">检测灵敏度</span>
+              <input class="tb-input" id="sensRange" type="range" min="1" max="30" value="2" />
+              <span class="gm" id="sensVal" style="min-width:64px">忽略 ≤ 2px</span>
+            </div>
+
             <div style="display:flex;gap:9px;flex-wrap:wrap">
               <button class="btn sm" id="scanGaps">开始扫描</button>
               <button class="btn ghost sm" id="closeAllGaps">一键闭合全部</button>
@@ -946,17 +1016,39 @@
             <div class="gap-list" id="gapList">
               <div class="empty-note">尚未扫描。先画几笔或载入示例线稿，再点击「开始扫描」。</div>
             </div>
+
+            <p class="pane-head" style="margin-top:14px">闭合历史</p>
+            <div id="closedHistory" style="min-height:30px"><div class="empty-note">暂无闭合记录</div></div>
+
+            <p class="pane-head" style="margin-top:14px">魔棒填色演示</p>
+            <p class="pane-desc">点击下方区域中的空白处，演示泛洪算法如何识别并填充闭合区域。正式使用请在工具栏切换「🪄 魔棒」后点击画布。</p>
+            <div style="position:relative;width:100%;aspect-ratio:1.5/1;background:#14131c;border:1px solid var(--line);border-radius:8px;overflow:hidden">
+              <canvas id="wandDemo" width="240" height="160" style="width:100%;height:100%;cursor:crosshair"></canvas>
+            </div>
+            <div class="tb-group" style="margin-top:8px">
+              <span class="lb">容差</span>
+              <input class="tb-input" id="wandTol" type="range" min="0" max="120" value="32" />
+            </div>
           </div>
 
           <div class="side-pane" id="pane-refs">
             <p class="pane-head">动作参考搜索</p>
-            <p class="pane-desc">输入动作关键词，检索人体动态参考图，附结构要点提示。</p>
+            <p class="pane-desc">输入动作关键词，检索人体动态参考图，附结构要点提示。也可在下方 AI 顾问输入指定动作，获得动作分析、参考图与动画演示。</p>
             <div class="ref-search">
               <input id="refInput" placeholder="搜索动作，如：跳跃 / 持剑 / 回眸" />
               <button class="btn sm" id="refSearchBtn">搜索</button>
             </div>
             <div class="ref-chips" id="refChips"></div>
             <div id="refBody"></div>
+
+            <div class="ai-chat">
+              <p class="pane-head" style="margin-top:16px">AI 动作顾问</p>
+              <div class="ai-messages" id="aiMsgs"></div>
+              <div class="ai-input">
+                <input id="aiInput" placeholder="描述一个动作，如：拔剑的起手式" />
+                <button class="btn sm" id="aiSend">发送</button>
+              </div>
+            </div>
           </div>
         </aside>
       </div>
@@ -1127,6 +1219,28 @@
 </section>
 
 <div class="toast" id="toast"></div>
+
+<!-- 大缺口建议弹框 -->
+<div class="modal" id="bigGapModal" style="display:none">
+  <div class="modal-card" style="max-width:420px">
+    <h3 style="margin:0 0 8px;color:var(--gold)">缺口较大，建议手动绘制</h3>
+    <p class="hint" id="bigGapDesc">该缺口间距较大，自动曲线可能无法准确还原笔触走向。已为你识别线稿并匹配画笔，可直接切换到画笔沿参考线绘制；也可强制闭合。</p>
+    <div class="form-card" style="margin:10px 0;padding:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span id="bigGapSwatch" style="width:34px;height:34px;border-radius:50%;border:2px solid var(--gold)"></span>
+        <div style="font-size:13px">
+          <div>识别到的线稿色：<b id="bigGapColor">#f2ece0</b></div>
+          <div>建议笔刷粗细：<b id="bigGapWidth">4</b> px</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn sm" id="bigGapUseBrush">采用此画笔并手动绘制</button>
+      <button class="btn ghost sm" id="bigGapForce">仍用曲线闭合</button>
+      <button class="btn ghost sm" id="bigGapCancel">取消</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ---------------- 数据 ---------------- */
@@ -1974,15 +2088,28 @@ const tipGap = document.getElementById("tipGap");
 const refChips = document.getElementById("refChips");
 
 const palette = ["#f2ece0", "#e7c078", "#e88fb1", "#7fa8e8", "#8fd9a8", "#d97b7b", "#8a8095"];
-const toolNames = { pen: "铅笔", marker: "马克笔", airbrush: "喷枪", eraser: "橡皮" };
+const toolNames = { pen: "铅笔", marker: "马克笔", airbrush: "喷枪", eraser: "橡皮", wand: "魔棒填色" };
 const brush = { tool: "pen", size: 5, opacity: 100, color: "#f2ece0" };
 
 let gaps = [], activeGap = null, lastData = null;
+let gapSk = null, gapW = 0, gapH = 0, gapScale = 2;   /* 最近一次扫描的骨架，供曲线闭合取切线方向 */
+let closedHistory = [];                                 /* 闭合历史，供逐条撤回 */
+let pendingGap = null;                                  /* 大缺口弹框中待处理的缺口 */
+let sensMinGap = 2;                                     /* 灵敏度：忽略小于此像素的缺口 */
+let fillColor = "#7fa8e8", wandTolerance = 32;
+let wandSel = null;                                     /* 魔棒选区 {mask:Uint8Array, w, h, bounds} */
+let wandAnimId = null;
 let undoStack = [], redoStack = [];
 const HIST_MAX = 10;
 
 function updateTip() {
-  tipBrush.textContent = toolNames[brush.tool] + " " + brush.size + "px";
+  if (brush.tool === "wand") {
+    tipBrush.textContent = "魔棒填色 · 容差 " + wandTolerance;
+    drawCanvas.style.cursor = "crosshair";
+  } else {
+    tipBrush.textContent = toolNames[brush.tool] + " " + brush.size + "px";
+    drawCanvas.style.cursor = "";
+  }
 }
 
 function renderSwatches() {
@@ -2162,6 +2289,7 @@ let drawing = false, lastPt = null;
 
 drawCanvas.addEventListener("pointerdown", e => {
   const p = canvasPos(e);
+  if (brush.tool === "wand") { wandSelect(p); return; }
   const hit = hitGap(p);
   if (hit >= 0) { selectGap(hit); return; }
   drawCanvas.setPointerCapture(e.pointerId);
@@ -2363,6 +2491,7 @@ function scanGaps() {
       gaps.push({
         ax: (A.x + 0.5) * scale, ay: (A.y + 0.5) * scale,
         bx: (B.x + 0.5) * scale, by: (B.y + 0.5) * scale,
+        ax2: A.x, ay2: A.y, bx2: B.x, by2: B.y, ai: A.i, bi: B.i,
         size: Math.round(gsize),
         width: Math.max(2, Math.round(lineW)),
         sev: gsize <= 10 ? 1 : gsize <= 22 ? 2 : 3,
@@ -2373,11 +2502,18 @@ function scanGaps() {
   }
   gaps.sort((x, y) => x.ay - y.ay || x.ax - y.ax);
 
+  /* 保存骨架供曲线闭合取切线方向 */
+  gapSk = sk; gapW = w; gapH = h; gapScale = scale;
+
+  /* 灵敏度过滤：忽略小于阈值的缺口 */
+  const before = gaps.length;
+  gaps = gaps.filter(g => g.size >= sensMinGap);
+
   activeGap = null;
   renderGapList();
   drawOverlayGaps();
   tipGap.textContent = gaps.length
-    ? "缺口检测：发现 " + gaps.length + " 处未闭合缺口"
+    ? "缺口检测：发现 " + gaps.length + " 处未闭合缺口" + (before !== gaps.length ? "（已忽略 " + (before - gaps.length) + " 处细小缺口）" : "")
     : "缺口检测：未发现未闭合的断点";
 }
 
@@ -2493,25 +2629,151 @@ function sampleColor(x, y) {
   return brush.color;
 }
 
+/* 沿骨架从端点往回走 steps 步，返回该方向（指向线条内部，单位向量，按全分辨率缩放） */
+function skelTangent(sk, w, h, startIdx, steps) {
+  let prev = -1, cur = startIdx;
+  let farX = 0, farY = 0;
+  const sx = startIdx % w, sy = (startIdx - sx) / w;
+  for (let s = 0; s < steps; s++) {
+    const cx = cur % w, cy = (cur - cx) / w;
+    farX = cx; farY = cy;
+    const nbs = nbList(sk, w, h, cx, cy);
+    if (nbs.length === 0) break;
+    let next = nbs[0];
+    if (nbs.length > 1) {
+      /* 取最沿原方向前进的邻居 */
+      let best = -1, bd = -Infinity;
+      const dx = cx - (prev === -1 ? cx : (prev % w));
+      const dy = cy - (prev === -1 ? cy : ((prev - (prev % w)) / w));
+      for (const n of nbs) {
+        if (n === prev) continue;
+        const nx = n % w, ny = (n - nx) / w;
+        const dot = (nx - cx) * dx + (ny - cy) * dy;
+        if (dot > bd) { bd = dot; best = n; }
+      }
+      next = best;
+    }
+    if (next === prev || next === cur) break;
+    prev = cur; cur = next;
+  }
+  const vx = sx - farX, vy = sy - farY;
+  const len = Math.hypot(vx, vy) || 1;
+  return { x: vx / len, y: vy / len };
+}
+
+/* 用三次贝塞尔曲线闭合缺口，方向取自两端骨架切线 */
 function drawClose(g) {
+  const col = sampleColor(g.ax, g.ay);
+  const lineW = Math.max(2, g.width);
   dctx.save();
   dctx.globalCompositeOperation = "source-over";
   dctx.globalAlpha = 1;
-  dctx.strokeStyle = sampleColor(g.ax, g.ay);
-  dctx.lineWidth = Math.max(2, g.width);
+  dctx.strokeStyle = col;
+  dctx.lineWidth = lineW;
   dctx.lineCap = "round";
-  dctx.beginPath();
-  dctx.moveTo(g.ax, g.ay);
-  dctx.lineTo(g.bx, g.by);
-  dctx.stroke();
+  dctx.lineJoin = "round";
+
+  let useCurve = false;
+  if (gapSk && g.size >= 4) {
+    const ta = skelTangent(gapSk, gapW, gapH, g.ai, 8);
+    const tb = skelTangent(gapSk, gapW, gapH, g.bi, 8);
+    const len = g.size;
+    /* 控制点：沿各自切线方向、距离为缺口长度的 0.45 倍 */
+    const k = len * 0.45;
+    const c1x = g.ax + ta.x * k, c1y = g.ay + ta.y * k;
+    const c2x = g.bx + tb.x * k, c2y = g.by + tb.y * k;
+    /* 控制合理性：控制点不能拉得离两点连线太远（避免 S 形过冲） */
+    const mx = (g.ax + g.bx) / 2, my = (g.ay + g.by) / 2;
+    const c1dist = Math.hypot(c1x - mx, c1y - my);
+    const c2dist = Math.hypot(c2x - mx, c2y - my);
+    if (c1dist < len * 1.2 && c2dist < len * 1.2) {
+      dctx.beginPath();
+      dctx.moveTo(g.ax, g.ay);
+      dctx.bezierCurveTo(c1x, c1y, c2x, c2y, g.bx, g.by);
+      dctx.stroke();
+      useCurve = true;
+    }
+  }
+
+  if (!useCurve) {
+    /* 回退：直线连接（极小缺口或骨架信息不可用时） */
+    dctx.beginPath();
+    dctx.moveTo(g.ax, g.ay);
+    dctx.lineTo(g.bx, g.by);
+    dctx.stroke();
+  }
   dctx.restore();
+  return useCurve;
 }
+
+/* 大缺口弹框 */
+function showBigGapModal(g) {
+  pendingGap = g;
+  const col = sampleColor(g.ax, g.ay);
+  document.getElementById("bigGapSwatch").style.background = col;
+  document.getElementById("bigGapColor").textContent = col;
+  document.getElementById("bigGapWidth").textContent = Math.max(2, g.width);
+  document.getElementById("bigGapDesc").textContent =
+    "该缺口间距 " + g.size + "px，超过建议自动闭合阈值。已识别线稿颜色与粗细，建议切换为画笔沿参考线手动绘制；也可强制用曲线闭合（可能失真）。";
+  document.getElementById("bigGapModal").style.display = "flex";
+}
+
+function hideBigGapModal() {
+  document.getElementById("bigGapModal").style.display = "none";
+  pendingGap = null;
+}
+
+/* 记入闭合历史 */
+function pushClosedHistory(g, curved) {
+  /* 撤回需要的是闭合「前」的画布状态 —— 即 snapshot() 刚压入 undoStack 的那帧 */
+  const before = undoStack.length ? undoStack[undoStack.length - 1] : dctx.getImageData(0, 0, CW, CH);
+  closedHistory.push({
+    gap: { ...g },
+    snapshot: before,
+    curved,
+    when: nowLabel()
+  });
+  renderClosedHistory();
+}
+
+function renderClosedHistory() {
+  const box = document.getElementById("closedHistory");
+  if (!closedHistory.length) {
+    box.innerHTML = `<div class="empty-note">暂无闭合记录</div>`;
+    return;
+  }
+  box.innerHTML = closedHistory.map((h, i) => `
+    <div class="closed-item">
+      <div>
+        <div>${h.gap.kind} #${i + 1} · ${h.curved ? "曲线闭合" : "直线闭合"} · ${h.gap.size}px</div>
+        <div class="cmeta">${h.when}</div>
+      </div>
+      <button class="btn ghost sm" data-undo-close="${i}">撤回</button>
+    </div>`).join("");
+}
+
+function undoClose(i) {
+  const h = closedHistory[i];
+  if (!h) return;
+  restore(h.snapshot);
+  closedHistory.splice(i);   /* 撤回本条及之后所有闭合（因快照是全画布状态） */
+  renderClosedHistory();
+  toast("已撤回该次闭合");
+  scanGaps();
+}
+
+const BIG_GAP_LIMIT = 36;   /* 超过此像素的缺口先弹框建议手动绘制 */
 
 function closeGap(g) {
   if (!g) return;
+  if (g.size > BIG_GAP_LIMIT) {
+    showBigGapModal(g);
+    return;
+  }
   snapshot();
-  drawClose(g);
-  toast("已闭合断点，正在重新扫描…");
+  const curved = drawClose(g);
+  pushClosedHistory(g, curved);
+  toast("已用" + (curved ? "曲线" : "直线") + "闭合缺口");
   scanGaps();
 }
 
@@ -2519,8 +2781,12 @@ function closeAllGaps() {
   if (!gaps.length) { toast("当前没有待闭合的缺口，先点击「开始扫描」"); return; }
   snapshot();
   const list = gaps.slice();
-  list.forEach(drawClose);
-  toast("已一键闭合 " + list.length + " 处缺口");
+  let curvedCount = 0;
+  list.forEach(g => {
+    if (drawClose(g)) curvedCount++;
+    pushClosedHistory(g, true);
+  });
+  toast("已一键闭合 " + list.length + " 处缺口（其中 " + curvedCount + " 处用曲线）");
   scanGaps();
 }
 
@@ -2637,6 +2903,13 @@ panelDraw.addEventListener("click", e => {
   if (lg) { selectGap(+lg.dataset.locateGap); return; }
   const gi = e.target.closest("[data-gap]");
   if (gi) { selectGap(+gi.dataset.gap); return; }
+  const uc = e.target.closest("[data-undo-close]");
+  if (uc) { undoClose(+uc.dataset.undoClose); return; }
+  const sr = e.target.closest("[data-send-ref]");
+  if (sr) { setCanvasRef(sr.dataset.sendRef, sr.dataset.label); return; }
+  if (e.target.id === "importImgBtn") { document.getElementById("importImgInput").click(); return; }
+  if (e.target.id === "wandFillSel") { wandFill(); return; }
+  if (e.target.id === "wandClearSel") { wandClearSelection(); return; }
   const ch = e.target.closest("[data-refchip]");
   if (ch) { refChip = ch.dataset.refchip; renderRefChips(); renderRefBody(); return; }
   const rc = e.target.closest("[data-ref]");
@@ -2651,18 +2924,476 @@ panelDraw.addEventListener("click", e => {
   if (e.target.id === "undoBtn") { undo(); return; }
   if (e.target.id === "redoBtn") { redo(); return; }
   if (e.target.id === "refSearchBtn") { doRefSearch(); return; }
+  if (e.target.id === "aiSend") { aiSend(); return; }
+  if (e.target.id === "bigGapUseBrush") { bigGapUseBrush(); return; }
+  if (e.target.id === "bigGapForce") { bigGapForceClose(); return; }
+  if (e.target.id === "bigGapCancel") { hideBigGapModal(); return; }
 });
 
 panelDraw.addEventListener("input", e => {
   if (e.target.id === "brushSize") { brush.size = +e.target.value; updateTip(); }
   else if (e.target.id === "brushOpacity") { brush.opacity = +e.target.value; updateTip(); }
   else if (e.target.id === "brushColor") setColor(e.target.value);
+  else if (e.target.id === "fillColor") { fillColor = e.target.value; }
+  else if (e.target.id === "sensRange") {
+    sensMinGap = +e.target.value;
+    document.getElementById("sensVal").textContent = "忽略 ≤ " + sensMinGap + "px";
+  }
+  else if (e.target.id === "wandTol") {
+    wandTolerance = +e.target.value;
+    if (wandSel) wandSelect(wandSel.seed);   /* 用新容差重算选区 */
+  }
 });
 
 panelDraw.addEventListener("keydown", e => {
   if (e.target.id === "refInput" && e.key === "Enter") { e.preventDefault(); doRefSearch(); }
+  if (e.target.id === "aiInput" && e.key === "Enter") { e.preventDefault(); aiSend(); }
 });
 
+/* ---------- 大缺口弹框操作 ---------- */
+function bigGapUseBrush() {
+  if (!pendingGap) return;
+  const col = sampleColor(pendingGap.ax, pendingGap.ay);
+  brush.color = col;
+  brush.size = Math.max(2, pendingGap.width);
+  brush.tool = "pen";
+  document.getElementById("brushColor").value = col;
+  document.getElementById("brushSize").value = brush.size;
+  renderSwatches();
+  setTool("pen");
+  hideBigGapModal();
+  toast("已采用线稿画笔（" + col + " / " + brush.size + "px），可沿参考线手动绘制");
+}
+
+function bigGapForceClose() {
+  if (!pendingGap) return;
+  const g = pendingGap;
+  hideBigGapModal();
+  snapshot();
+  const curved = drawClose(g);
+  pushClosedHistory(g, curved);
+  toast("已强制用" + (curved ? "曲线" : "直线") + "闭合该大缺口");
+  scanGaps();
+}
+
+/* ---------- 导入外部图片 ---------- */
+document.getElementById("importImgInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const ul = document.getElementById("drawUnderlay");
+      ul.src = img.src;
+      ul.style.display = "block";
+      const merge = confirm("已载入参考底图（半透明显示在画布下方，可直接描摹，不影响缺口检测）。\n\n是否同时把图片合并到绘画画布？\n· 是：图片写入画布，可直接修改，但之后无法检测缺口。\n· 否：仅作为参考底图层。");
+      if (merge) {
+        snapshot();
+        dctx.save();
+        dctx.globalAlpha = 1;
+        dctx.globalCompositeOperation = "source-over";
+        const scale = Math.max(CW / img.width, CH / img.height);
+        const dw = img.width * scale, dh = img.height * scale;
+        dctx.drawImage(img, (CW - dw) / 2, (CH - dh) / 2, dw, dh);
+        dctx.restore();
+        ul.style.display = "none";
+        invalidateGaps("已合并图片到画布；如需缺口检测，请先清除后重新绘制线条。");
+        toast("图片已合并到画布");
+      } else {
+        toast("已载入为参考底图，可在上方描摹");
+      }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = "";
+});
+
+/* ---------- 魔棒填色（泛洪算法） ---------- */
+function colorDist(d, sr, sg, sb, sa) {
+  const dr = d[0] - sr, dg = d[1] - sg, db = d[2] - sb, da = d[3] - sa;
+  return Math.sqrt(dr * dr + dg * dg + db * db + da * da);
+}
+
+function floodFillMask(data, w, h, sx, sy, tol) {
+  const mask = new Uint8Array(w * h);
+  const seedIdx = (sy * w + sx) * 4;
+  const sr = data[seedIdx], sg = data[seedIdx + 1], sb = data[seedIdx + 2], sa = data[seedIdx + 3];
+  const stack = [[sx, sy]];
+  let minX = sx, maxX = sx, minY = sy, maxY = sy;
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const idx = y * w + x;
+    if (mask[idx]) continue;
+    const k = idx * 4;
+    if (colorDist(data.subarray(k, k + 4), sr, sg, sb, sa) > tol) continue;
+    mask[idx] = 1;
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+  }
+  return { mask, bounds: { minX, maxX, minY, maxY } };
+}
+
+function renderSelection(ctx, sel, phase) {
+  const { mask, w, h, bounds } = sel;
+  ctx.save();
+  const img = ctx.createImageData(w, h);
+  for (let i = 0; i < w * h; i++) {
+    if (mask[i]) {
+      const k = i * 4;
+      img.data[k] = 231; img.data[k + 1] = 192; img.data[k + 2] = 120; img.data[k + 3] = 45;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  const boundary = [];
+  for (let y = bounds.minY; y <= bounds.maxY; y++) {
+    for (let x = bounds.minX; x <= bounds.maxX; x++) {
+      const i = y * w + x;
+      if (!mask[i]) continue;
+      if ((x > 0 && !mask[i - 1]) || (x < w - 1 && !mask[i + 1]) ||
+          (y > 0 && !mask[i - w]) || (y < h - 1 && !mask[i + w])) boundary.push(i);
+    }
+  }
+  if (boundary.length > 8000) { ctx.restore(); return; }
+  ctx.fillStyle = "rgba(231,192,120,.95)";
+  for (const i of boundary) {
+    const x = i % w, y = (i - x) / w;
+    if ((x + y + phase) % 8 < 4) ctx.fillRect(x, y, 1, 1);
+  }
+  ctx.restore();
+}
+
+function wandSelect(p) {
+  const x = Math.max(0, Math.min(CW - 1, Math.round(p.x)));
+  const y = Math.max(0, Math.min(CH - 1, Math.round(p.y)));
+  let img;
+  try { img = dctx.getImageData(0, 0, CW, CH); }
+  catch (err) { toast("画布已被外部图片污染，无法读取像素用于魔棒填色"); return; }
+  const { mask, bounds } = floodFillMask(img.data, CW, CH, x, y, wandTolerance);
+  let count = 0;
+  for (let i = 0; i < mask.length; i++) if (mask[i]) count++;
+  if (count < 2) { toast("选区过小或容差不足，请调整容差后重试"); return; }
+  wandSel = { mask, w: CW, h: CH, bounds, seed: { x, y } };
+  tipGap.textContent = "魔棒选区：" + count + " 像素（点击「填充选区」或调整容差）";
+  showWandControls();
+  startWandAnim();
+}
+
+function showWandControls() {
+  let bar = document.getElementById("wandCtrlBar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "wandCtrlBar";
+    bar.style.cssText = "position:absolute;top:10px;left:10px;background:rgba(14,13,16,.88);border:1px solid rgba(231,192,120,.5);border-radius:10px;padding:8px 10px;display:flex;gap:8px;align-items:center;font-size:12px;backdrop-filter:blur(4px)";
+    bar.innerHTML = `
+      <span style="color:var(--gold)">已选区域</span>
+      <input type="color" id="wandFillColor" value="${fillColor}" style="width:30px;height:26px;padding:1px;border-radius:6px;border:1px solid var(--line)" />
+      <button class="btn sm" id="wandFillSel">填充选区</button>
+      <button class="btn ghost sm" id="wandClearSel">清除选区</button>`;
+    document.querySelector(".canvas-wrap").appendChild(bar);
+    bar.addEventListener("input", e => {
+      if (e.target.id === "wandFillColor") { fillColor = e.target.value; document.getElementById("fillColor").value = fillColor; }
+    });
+  }
+  bar.style.display = "flex";
+  document.getElementById("wandFillColor").value = fillColor;
+}
+
+let wandPhase = 0;
+function startWandAnim() {
+  if (wandAnimId) cancelAnimationFrame(wandAnimId);
+  let last = 0;
+  const loop = t => {
+    if (!wandSel) { wandAnimId = null; return; }
+    if (t - last > 110) {
+      wandPhase = (wandPhase + 1) % 8;
+      octx.clearRect(0, 0, CW, CH);
+      drawOverlayGaps();
+      renderSelection(octx, wandSel, wandPhase);
+      last = t;
+    }
+    wandAnimId = requestAnimationFrame(loop);
+  };
+  wandAnimId = requestAnimationFrame(loop);
+}
+
+function wandClearSelection() {
+  wandSel = null;
+  if (wandAnimId) cancelAnimationFrame(wandAnimId);
+  wandAnimId = null;
+  octx.clearRect(0, 0, CW, CH);
+  drawOverlayGaps();
+  const bar = document.getElementById("wandCtrlBar");
+  if (bar) bar.style.display = "none";
+  tipGap.textContent = "已清除魔棒选区";
+}
+
+function wandFill() {
+  if (!wandSel) return;
+  snapshot();
+  const { mask, w, h } = wandSel;
+  const img = dctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const hex = fillColor.replace("#", "");
+  const fr = parseInt(hex.substr(0, 2), 16);
+  const fg = parseInt(hex.substr(2, 2), 16);
+  const fb = parseInt(hex.substr(4, 2), 16);
+  for (let i = 0; i < w * h; i++) {
+    if (mask[i]) {
+      const k = i * 4;
+      d[k] = fr; d[k + 1] = fg; d[k + 2] = fb; d[k + 3] = 255;
+    }
+  }
+  dctx.putImageData(img, 0, 0);
+  toast("已填充选区");
+  wandClearSelection();
+  tipGap.textContent = "已填充，可继续扫描缺口或填色";
+}
+
+function initWandDemo() {
+  const c = document.getElementById("wandDemo");
+  if (!c) return;
+  const x = c.getContext("2d");
+  function redraw() {
+    x.clearRect(0, 0, c.width, c.height);
+    x.fillStyle = "#1c1b22"; x.fillRect(0, 0, c.width, c.height);
+    x.strokeStyle = "#e7c078"; x.lineWidth = 3;
+    x.beginPath(); x.arc(80, 80, 44, 0, Math.PI * 2); x.stroke();
+    x.beginPath(); x.rect(140, 40, 70, 70); x.stroke();
+    x.beginPath(); x.moveTo(200, 130); x.lineTo(230, 50); x.lineTo(170, 50); x.closePath(); x.stroke();
+    x.fillStyle = "rgba(127,168,232,.4)"; x.fillRect(140, 40, 70, 70);
+  }
+  redraw();
+  c.addEventListener("click", e => {
+    const r = c.getBoundingClientRect();
+    const px = Math.round((e.clientX - r.left) * (c.width / r.width));
+    const py = Math.round((e.clientY - r.top) * (c.height / r.height));
+    const img = x.getImageData(0, 0, c.width, c.height);
+    const { mask } = floodFillMask(img.data, c.width, c.height, px, py, 32);
+    const hex = fillColor.replace("#", "");
+    const fr = parseInt(hex.substr(0, 2), 16), fg = parseInt(hex.substr(2, 2), 16), fb = parseInt(hex.substr(4, 2), 16);
+    for (let i = 0; i < c.width * c.height; i++) {
+      if (mask[i]) { const k = i * 4; img.data[k] = fr; img.data[k + 1] = fg; img.data[k + 2] = fb; img.data[k + 3] = 220; }
+    }
+    x.putImageData(img, 0, 0);
+    setTimeout(redraw, 1600);
+  });
+}
+
+/* ---------- 浮动参考图 ---------- */
+function setCanvasRef(url, label) {
+  const box = document.getElementById("refPreview");
+  document.getElementById("refPreviewImg").src = url;
+  document.getElementById("refPreviewLabel").textContent = label || "参考图";
+  box.style.display = "block";
+  setSidePane("gaps");
+  toast("已发送到绘画面板参考（右上角）");
+}
+document.getElementById("refPreviewClose").addEventListener("click", () => {
+  document.getElementById("refPreview").style.display = "none";
+});
+
+/* ---------- AI 动作顾问 ---------- */
+function mkPose(o) { return o; }
+function stanceAnim() {
+  const A = { head:[100,40], neck:[100,58], chest:[100,78], pelvis:[100,118],
+    lS:[84,78], lE:[74,98], lH:[70,118], rS:[116,78], rE:[126,98], rH:[130,118],
+    lHi:[90,118], lK:[88,160], lA:[90,200], rHi:[110,118], rK:[112,160], rA:[110,200] };
+  const B = { head:[100,38], neck:[100,56], chest:[100,76], pelvis:[100,116],
+    lS:[83,76], lE:[72,96], lH:[68,116], rS:[117,76], rE:[128,96], rH:[132,116],
+    lHi:[91,116], lK:[89,158], lA:[91,200], rHi:[109,116], rK:[111,158], rA:[109,200] };
+  return [A, B];
+}
+function sitAnim() {
+  const A = { head:[100,30], neck:[100,48], chest:[96,70], pelvis:[100,100],
+    lS:[80,70], lE:[60,82], lH:[54,100], rS:[112,70], rE:[130,82], rH:[136,100],
+    lHi:[88,100], lK:[60,108], lA:[58,130], rHi:[112,100], rK:[140,108], rA:[142,130] };
+  const B = { head:[100,28], neck:[100,46], chest:[97,68], pelvis:[100,98],
+    lS:[81,68], lE:[61,80], lH:[55,98], rS:[111,68], rE:[129,80], rH:[135,98],
+    lHi:[89,98], lK:[61,106], lA:[59,130], rHi:[111,98], rK:[139,106], rA:[141,130] };
+  return [A, B];
+}
+function jumpAnim() {
+  const A = { head:[100,40], neck:[100,56], chest:[100,74], pelvis:[100,100],
+    lS:[82,74], lE:[66,60], lH:[60,46], rS:[118,74], rE:[134,60], rH:[140,46],
+    lHi:[88,100], lK:[78,120], lA:[74,138], rHi:[112,100], rK:[122,120], rA:[126,138] };
+  const B = { head:[100,36], neck:[100,52], chest:[100,70], pelvis:[100,96],
+    lS:[84,70], lE:[70,56], lH:[64,42], rS:[116,70], rE:[130,56], rH:[136,42],
+    lHi:[90,96], lK:[80,114], lA:[76,130], rHi:[110,96], rK:[120,114], rA:[124,130] };
+  return [A, B];
+}
+function runAnim() {
+  const A = { head:[100,40], neck:[100,56], chest:[100,74], pelvis:[100,100],
+    lS:[80,74], lE:[60,64], lH:[44,60], rS:[120,74], rE:[136,84], rH:[148,96],
+    lHi:[88,100], lK:[64,108], lA:[40,112], rHi:[112,100], rK:[138,96], rA:[156,92] };
+  const B = { head:[100,38], neck:[100,54], chest:[100,72], pelvis:[100,98],
+    lS:[80,72], lE:[62,62], lH:[46,58], rS:[120,72], rE:[138,82], rH:[150,94],
+    lHi:[88,98], lK:[62,106], lA:[38,110], rHi:[112,98], rK:[140,94], rA:[158,90] };
+  return [A, B];
+}
+function swordAnim() {
+  const A = { head:[100,40], neck:[100,56], chest:[100,74], pelvis:[100,100],
+    lS:[82,74], lE:[62,82], lH:[52,92], rS:[118,74], rE:[138,70], rH:[156,60],
+    lHi:[90,100], lK:[88,140], lA:[90,180], rHi:[110,100], rK:[112,140], rA:[110,180] };
+  const B = { head:[100,40], neck:[100,56], chest:[100,74], pelvis:[100,100],
+    lS:[82,74], lE:[64,84], lH:[56,96], rS:[118,74], rE:[142,66], rH:[162,54],
+    lHi:[90,100], lK:[88,140], lA:[90,180], rHi:[110,100], rK:[112,140], rA:[110,180] };
+  return [A, B];
+}
+function lookbackAnim() {
+  const A = { head:[88,40], neck:[96,56], chest:[100,74], pelvis:[100,100],
+    lS:[82,74], lE:[66,88], lH:[60,104], rS:[118,74], rE:[132,88], rH:[138,104],
+    lHi:[90,100], lK:[88,140], lA:[90,180], rHi:[110,100], rK:[112,140], rA:[110,180] };
+  const B = { head:[84,40], neck:[94,56], chest:[100,74], pelvis:[100,100],
+    lS:[82,74], lE:[68,88], lH:[62,104], rS:[118,74], rE:[130,88], rH:[136,104],
+    lHi:[90,100], lK:[88,140], lA:[90,180], rHi:[110,100], rK:[112,140], rA:[110,180] };
+  return [A, B];
+}
+function leanAnim() {
+  const A = { head:[110,36], neck:[108,54], chest:[104,74], pelvis:[96,104],
+    lS:[86,74], lE:[72,92], lH:[66,108], rS:[122,74], rE:[132,84], rH:[136,92],
+    lHi:[84,104], lK:[74,140], lA:[70,180], rHi:[108,104], rK:[124,140], rA:[130,180] };
+  const B = { head:[112,36], neck:[110,54], chest:[106,74], pelvis:[98,104],
+    lS:[88,74], lE:[74,92], lH:[68,108], rS:[124,74], rE:[134,84], rH:[138,92],
+    lHi:[86,104], lK:[76,140], lA:[72,180], rHi:[110,104], rK:[126,140], rA:[132,180] };
+  return [A, B];
+}
+function crouchAnim() {
+  const A = { head:[100,46], neck:[100,62], chest:[100,80], pelvis:[100,110],
+    lS:[82,80], lE:[64,90], lH:[58,100], rS:[118,80], rE:[136,90], rH:[142,100],
+    lHi:[86,110], lK:[70,128], lA:[72,150], rHi:[114,110], rK:[130,128], rA:[128,150] };
+  const B = { head:[100,44], neck:[100,60], chest:[100,78], pelvis:[100,108],
+    lS:[83,78], lE:[65,88], lH:[59,98], rS:[117,78], rE:[135,88], rH:[141,98],
+    lHi:[87,108], lK:[71,126], lA:[73,150], rHi:[113,108], rK:[129,126], rA:[127,150] };
+  return [A, B];
+}
+
+function lerpPose(a, b, t) {
+  const o = {};
+  for (const k in a) { o[k] = [a[k][0] + (b[k][0] - a[k][0]) * t, a[k][1] + (b[k][1] - a[k][1]) * t]; }
+  return o;
+}
+
+function drawStickFigure(ctx, p, w, h) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = "#e7c078";
+  ctx.fillStyle = "#e7c078";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  const line = (a, b) => { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); };
+  line(p.head, p.neck); line(p.neck, p.chest); line(p.chest, p.pelvis);
+  line(p.chest, p.lS); line(p.lS, p.lE); line(p.lE, p.lH);
+  line(p.chest, p.rS); line(p.rS, p.rE); line(p.rE, p.rH);
+  line(p.pelvis, p.lHi); line(p.lHi, p.lK); line(p.lK, p.lA);
+  line(p.pelvis, p.rHi); line(p.rHi, p.rK); line(p.rK, p.rA);
+  ctx.beginPath(); ctx.arc(p.head[0], p.head[1] - 8, 9, 0, Math.PI * 2); ctx.stroke();
+}
+
+function startStickAnim(canvas, frames) {
+  const ctx = canvas.getContext("2d");
+  let raf, start = performance.now();
+  const dur = 900;
+  const tick = now => {
+    const t = ((now - start) % dur) / dur;
+    const phase = t < 0.5 ? t * 2 : 2 - t * 2;
+    drawStickFigure(ctx, lerpPose(frames[0], frames[1], phase), canvas.width, canvas.height);
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  canvas._raf = raf;
+}
+
+const aiKB = [
+  { keys: ["站立", "站姿", "立正", "立"], name: "自然站姿",
+    analysis: { 重心: "垂直落在支撑脚足弓稍前，骨盆微前倾。", 骨盆: "与地面水平或轻微侧倾，承重腿一侧髋略高。", 胸腔: "略向后收，锁骨水平，肩颈放松。", 四肢: "双臂自然下垂，手肘微曲；双腿一前一后或并立。", 动态线: "轻微 S 形，避免僵硬的直线。" },
+    imgs: ["full%20body%20standing%20pose%20reference%20neutral%20stance%20for%20artists", "anatomy%20standing%20figure%20contrapposto%20reference"],
+    anim: stanceAnim() },
+  { keys: ["坐姿", "坐"], name: "坐姿",
+    analysis: { 重心: "落在坐骨结节，脊柱呈自然 C 形。", 骨盆: "后倾，骶骨贴近支撑面。", 胸腔: "随脊柱弯曲，肋骨略下压。", 四肢: "大腿与小腿形成 90° 左右，脚掌平放或交叉。", 动态线: "柔和的 C 形，头部略前倾。" },
+    imgs: ["person%20sitting%20full%20body%20pose%20reference", "sitting%20pose%20anatomy%20reference%20for%20artists"],
+    anim: sitAnim() },
+  { keys: ["跳跃", "腾空", "跳"], name: "跳跃腾空",
+    analysis: { 重心: "沿抛物线运动，最高点时重心瞬时静止。", 骨盆: "前倾，双腿向腹部收拢。", 胸腔: "上提，呼吸扩张。", 四肢: "膝肘向身体中线收拢形成 C 形，手臂上扬或张开。", 动态线: "强烈的 C 形弧线，头发与衣摆反向拉伸。" },
+    imgs: ["person%20jumping%20in%20mid%20air%20dynamic%20pose%20reference", "jump%20pose%20action%20reference%20for%20artists"],
+    anim: jumpAnim() },
+  { keys: ["奔跑", "跑", "冲刺"], name: "奔跑冲刺",
+    analysis: { 重心: "前倾 15–20°，向前推进。", 骨盆: "随步幅左右旋转，与肩线反向。", 胸腔: "小幅起伏，配合呼吸。", 四肢: "交叉对侧协调——右腿前伸时左臂前摆。", 动态线: "前倾的斜线，腿部形成大跨度三角形。" },
+    imgs: ["person%20sprinting%20running%20dynamic%20full%20body%20pose%20reference", "running%20pose%20anatomy%20reference%20for%20artists"],
+    anim: runAnim() },
+  { keys: ["持剑", "拔剑", "剑", "武器"], name: "拔剑 / 持剑",
+    analysis: { 重心: "略后压，前脚虚点。", 骨盆: "微转，前脚侧对目标。", 胸腔: "微转，持剑手肩下沉。", 四肢: "前臂随拔出方向伸展，另一手虚扶鞘口。", 动态线: "从持剑手到后脚的斜线，剑身延长线为视觉焦点。" },
+    imgs: ["person%20drawing%20a%20sword%20from%20scabbard%20pose%20reference", "standing%20figure%20holding%20sword%20full%20body%20reference"],
+    anim: swordAnim() },
+  { keys: ["回眸", "回头", "转身"], name: "回眸侧身",
+    analysis: { 重心: "落在后脚，前脚放松。", 骨盆: "保持正面或微侧。", 胸腔: "随头部扭转，肩线一高一低。", 四肢: "一手可扶腰或自然下垂，体现扭转张力。", 动态线: "颈部扭转是关键，头先转、身后随。" },
+    imgs: ["person%20looking%20back%20over%20shoulder%20pose%20reference", "glancing%20back%20dynamic%20pose%20reference"],
+    anim: lookbackAnim() },
+  { keys: ["倚靠", "靠墙", "靠"], name: "倚墙而立",
+    analysis: { 重心: "偏向支撑腿，接触点在肩背与髋。", 骨盆: "外顶，形成 S 线。", 胸腔: "微展，肩放松。", 四肢: "一腿屈一腿直，手臂插兜或撑墙。", 动态线: "柔和的 S 形，靠墙面与身体留出发丝/布料空间。" },
+    imgs: ["person%20leaning%20against%20wall%20full%20body%20pose%20reference", "leaning%20pose%20casual%20reference%20for%20artists"],
+    anim: leanAnim() },
+  { keys: ["蹲", "下蹲", "深蹲"], name: "蹲姿",
+    analysis: { 重心: "落在双脚之间，略偏后。", 骨盆: "后倾下沉。", 胸腔: "前倾贴近大腿。", 四肢: "膝踝深屈，脚跟可离地。", 动态线: "紧凑的团状 C 形。" },
+    imgs: ["person%20crouching%20squatting%20full%20body%20pose%20reference", "squatting%20pose%20anatomy%20reference"],
+    anim: crouchAnim() }
+];
+
+const aiMsgs = [];
+function renderAiMsgs() {
+  const box = document.getElementById("aiMsgs");
+  box.innerHTML = aiMsgs.map(m => {
+    if (m.role === "u") return `<div class="ai-msg u">${m.text}</div>`;
+    const items = m.analysis ? Object.entries(m.analysis).map(([k, v]) => `<li><b>${k}</b>：${v}</li>`).join("") : "";
+    const imgs = m.imgs ? `<div class="ai-imgs">${m.imgs.map(src =>
+      `<img src="${src}" data-send-ref="${src}" data-label="${m.name}" title="点击放到绘画面板参考" loading="lazy" />`).join("")}</div>` : "";
+    const anim = m.anim ? `<canvas class="ai-anim" width="200" height="210" data-anim="${m.name}"></canvas>` : "";
+    const firstImg = m.imgs ? m.imgs[0] : "";
+    return `<div class="ai-msg a">
+      <div class="ai-head">AI 动作顾问 · ${m.name}</div>
+      <div>${m.intro || ""}</div>
+      ${items ? "<ul>" + items + "</ul>" : ""}
+      ${imgs}
+      ${anim}
+      ${firstImg ? `<button class="send-ref" data-send-ref="${firstImg}" data-label="${m.name}">把第一张参考图放到绘画面板 →</button>` : ""}
+    </div>`;
+  }).join("");
+  box.querySelectorAll("canvas[data-anim]").forEach(c => {
+    const kb = aiKB.find(k => k.name === c.dataset.anim);
+    if (kb) startStickAnim(c, kb.anim);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function aiSend() {
+  const input = document.getElementById("aiInput");
+  const q = input.value.trim();
+  if (!q) return;
+  aiMsgs.push({ role: "u", text: q });
+  input.value = "";
+  renderAiMsgs();
+
+  let best = null, bestScore = 0;
+  for (const kb of aiKB) {
+    let score = 0;
+    for (const k of kb.keys) if (q.includes(k)) score += k.length;
+    if (score > bestScore) { bestScore = score; best = kb; }
+  }
+  if (!best) best = aiKB[0];
+  const intro = bestScore > 0
+    ? `关于「${q}」，我匹配到「${best.name}」的动作分析：`
+    : `暂未精确匹配「${q}」，给你一个通用参考「${best.name}」，你也可以换个关键词再试。`;
+  aiMsgs.push({
+    role: "a", name: best.name, intro, analysis: best.analysis,
+    imgs: best.imgs.map(p => IMG(p, "portrait_4_3")), anim: true
+  });
+  renderAiMsgs();
+}
+
+initWandDemo();
 renderSwatches();
 updateTip();
 renderRefChips();
