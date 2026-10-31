@@ -1131,6 +1131,11 @@
       box-shadow: 0 0 0 2px rgba(231, 192, 120, .28);
     }
 
+    .canvas-view {
+      overflow: auto;
+      border-radius: 14px;
+    }
+
     .canvas-wrap {
       position: relative;
       width: 100%;
@@ -1275,6 +1280,75 @@
       font-size: 12px;
       margin-top: 8px;
       line-height: 1.65;
+    }
+
+    /* ===== 检测模式 / 部分检测范围 ===== */
+    .scan-modes {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0 6px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .02);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .mode-btn:hover {
+      border-color: rgba(231, 192, 120, .45);
+      color: var(--text);
+    }
+
+    .mode-btn.on {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(231, 192, 120, .08);
+    }
+
+    .region-box {
+      border: 1px dashed rgba(231, 192, 120, .45);
+      border-radius: 10px;
+      padding: 10px;
+      margin: 8px 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .region-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    /* 反复出现（已自动修复 ≥3 次）的缺口 */
+    .gap-item.stuck {
+      border-color: #d97b7b;
+      background: rgba(217, 123, 123, .08);
+    }
+
+    .sw-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1px solid rgba(255, 255, 255, .25);
+      vertical-align: -2px;
+      margin-right: 4px;
+    }
+
+    .sev.stuck-tag {
+      color: #d97b7b;
+      border: 1px solid rgba(217, 123, 123, .5);
     }
 
     .sev {
@@ -1422,6 +1496,25 @@
     }
 
     /* ===== 闭合历史 / 撤回 ===== */
+    .hist-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    /* 固定高度矩形框：历史再多也不会把页面无限拉长 */
+    .closed-history-box {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      margin-top: 8px;
+      background: rgba(255, 255, 255, .015);
+    }
+
     .closed-item {
       display: flex;
       justify-content: space-between;
@@ -1434,8 +1527,14 @@
       font-size: 12px;
     }
 
+    .closed-item:last-child {
+      margin-bottom: 0;
+    }
+
     .closed-item .cmeta {
       color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
     }
 
     .closed-item button {
@@ -2667,6 +2766,11 @@
             <button class="btn ghost sm" id="clearCanvas">清空画布</button>
             <button class="btn ghost sm" id="importImgBtn">导入图片</button>
             <input type="file" id="importImgInput" accept="image/*" style="display:none" />
+            <select class="tb-input" id="exportFmt" title="导出格式" style="width:132px">
+              <option value="png">PNG · 透明底</option>
+              <option value="jpg">JPG · 白底</option>
+            </select>
+            <button class="btn ghost sm" id="exportImgBtn">导出图片</button>
           </div>
         </div>
 
@@ -2678,6 +2782,8 @@
               <button class="tool" data-tool="airbrush" title="喷枪">💨</button>
               <button class="tool" data-tool="eraser" title="橡皮">🧽</button>
               <button class="tool" data-tool="wand" title="魔棒填色">🪄</button>
+              <button class="tool" data-tool="pick" title="取色吸管">💧</button>
+              <button class="tool" data-tool="move" title="移动 / 缩放导入图片">✥</button>
               <span class="tb-sep"></span>
               <div class="tb-group"><span class="lb">粗细</span><input class="tb-input" id="brushSize" type="range"
                   min="1" max="60" value="5" /></div>
@@ -2699,18 +2805,20 @@
               <button class="tool" id="redoBtn" title="重做">↷</button>
             </div>
 
-            <div class="canvas-wrap">
-              <img id="drawUnderlay" alt=""
-                style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.5;pointer-events:none;display:none" />
-              <canvas id="drawCanvas" width="1000" height="680"></canvas>
-              <canvas id="drawOverlay" width="1000" height="680"></canvas>
-              <div id="refPreview"
-                style="position:absolute;top:10px;right:10px;width:150px;background:rgba(14,13,16,.82);border:1px solid rgba(231,192,120,.5);border-radius:8px;overflow:hidden;display:none;backdrop-filter:blur(4px)">
-                <img id="refPreviewImg" style="width:100%;display:block" />
-                <div
-                  style="padding:6px 8px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center">
-                  <span id="refPreviewLabel">参考图</span>
-                  <button class="btn ghost sm" id="refPreviewClose" style="padding:1px 6px;font-size:11px">✕</button>
+            <div class="canvas-view">
+              <div class="canvas-wrap" id="canvasWrap">
+                <img id="drawUnderlay" alt=""
+                  style="position:absolute;left:0;top:0;width:0;height:0;object-fit:fill;pointer-events:none;display:none;user-select:none" />
+                <canvas id="drawCanvas" width="1000" height="680"></canvas>
+                <canvas id="drawOverlay" width="1000" height="680"></canvas>
+                <div id="refPreview"
+                  style="position:absolute;top:10px;right:10px;width:150px;background:rgba(14,13,16,.82);border:1px solid rgba(231,192,120,.5);border-radius:8px;overflow:hidden;display:none;backdrop-filter:blur(4px)">
+                  <img id="refPreviewImg" style="width:100%;display:block" />
+                  <div
+                    style="padding:6px 8px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center">
+                    <span id="refPreviewLabel">参考图</span>
+                    <button class="btn ghost sm" id="refPreviewClose" style="padding:1px 6px;font-size:11px">✕</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2718,6 +2826,7 @@
             <div class="canvas-tip">
               <span>画布 <b>1000 × 680</b> · 笔刷 <b id="tipBrush">铅笔 5px</b></span>
               <span id="tipGap">缺口检测：尚未扫描</span>
+              <span>快捷键 <b>⌘/Ctrl</b> + <b>+ / −</b> 缩放画布 · <b>⌘/Ctrl+Z</b> 撤回</span>
             </div>
           </div>
 
@@ -2730,7 +2839,29 @@
             <div class="side-pane active" id="pane-gaps">
               <p class="pane-head">缺口扫描</p>
               <p class="pane-desc">扫描画布中的线条，找出未闭合的线稿断点与开口。检测到的缺口会用<span class="sev s2"
-                  style="display:inline-flex;vertical-align:middle">曲线</span>自动连接，过大的缺口会提示手动绘制。</p>
+                  style="display:inline-flex;vertical-align:middle">曲线</span>自动连接；同一缺口反复出现 3 次后会提示改为手动修复。</p>
+
+              <div class="scan-modes">
+                <button class="mode-btn on" data-scan-mode="outer">外轮廓检测</button>
+                <button class="mode-btn" data-scan-mode="partial">部分检测</button>
+              </div>
+
+              <!-- 部分检测：灰色蒙层 → 自由圈选 → 泛洪细化 → 黑色流动虚线框 → 加/减范围 → 手动检测 -->
+              <div class="region-box" id="regionBox" style="display:none">
+                <div id="regionHint">在画布上按住拖拽，自由圈出要检测的范围。</div>
+                <div class="region-actions">
+                  <button class="btn sm" id="regionPick">重新圈选</button>
+                  <button class="btn ghost sm" id="regionAdd" style="display:none">加范围</button>
+                  <button class="btn ghost sm" id="regionSub" style="display:none">减范围</button>
+                  <button class="btn ghost sm" id="regionClear" style="display:none">清除范围</button>
+                  <button class="btn sm" id="regionApply" style="display:none">检测缺口</button>
+                </div>
+                <div class="tb-group" id="regionExpandWrap" style="margin-top:8px;display:none">
+                  <span class="lb">边界微调</span>
+                  <input class="tb-input" id="regionExpand" type="range" min="-8" max="16" value="2" />
+                  <span class="gm" id="regionExpandVal" style="min-width:52px">+2px</span>
+                </div>
+              </div>
 
               <div class="tb-group" style="margin:10px 0">
                 <span class="lb">检测灵敏度</span>
@@ -2746,8 +2877,11 @@
                 <div class="empty-note">尚未扫描。先画几笔或载入示例线稿，再点击「开始扫描」。</div>
               </div>
 
-              <p class="pane-head" style="margin-top:14px">闭合历史</p>
-              <div id="closedHistory" style="min-height:30px">
+              <div class="hist-head">
+                <p class="pane-head" style="margin:0">闭合历史</p>
+                <button class="btn ghost sm" id="undoLastClose">一键撤回上次闭合</button>
+              </div>
+              <div class="closed-history-box" id="closedHistory">
                 <div class="empty-note">暂无闭合记录</div>
               </div>
 
@@ -2967,11 +3101,11 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- 大缺口建议弹框 -->
+  <!-- 顽固缺口提示弹框（同一缺口反复出现 3 次） -->
   <div class="modal" id="bigGapModal" style="display:none">
     <div class="modal-card" style="max-width:420px">
-      <h3 style="margin:0 0 8px;color:var(--gold)">缺口较大，建议手动绘制</h3>
-      <p class="hint" id="bigGapDesc">该缺口间距较大，自动曲线可能无法准确还原笔触走向。已为你识别线稿并匹配画笔，可直接切换到画笔沿参考线绘制；也可强制闭合。</p>
+      <h3 style="margin:0 0 8px;color:var(--gold)">缺口反复出现，请手动修复</h3>
+      <p class="hint" id="bigGapDesc">该缺口已被自动修复 3 次仍反复出现，说明自动补线无法贴合此处线稿。请采用下方匹配笔刷沿参考线手动补线。</p>
       <div class="form-card" style="margin:10px 0;padding:12px">
         <div style="display:flex;align-items:center;gap:12px">
           <span id="bigGapSwatch" style="width:34px;height:34px;border-radius:50%;border:2px solid var(--gold)"></span>
@@ -2983,7 +3117,6 @@
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
         <button class="btn sm" id="bigGapUseBrush">采用此画笔并手动绘制</button>
-        <button class="btn ghost sm" id="bigGapForce">仍用曲线闭合</button>
         <button class="btn ghost sm" id="bigGapCancel">取消</button>
       </div>
     </div>
@@ -3070,8 +3203,27 @@
       "探索者": { art: "浏览并收藏喜欢的画作，点击爱心即可加入收藏夹。", commission: "选择心仪画师，填写下方表单即可发起约稿。", goods: "把喜欢的同人好物加入购物车，结算时统一支付。", cta: "我的收藏" }
     };
 
+    /* ================= DOM 访问层（统一缓存，降低 DOM 查询频率） ================= */
+    /* 按 id 查询并缓存元素引用；节点被整体重绘移除时（isConnected=false）自动重新查询 */
+    const domCache = new Map();
+    function $id(id) {
+      let el = domCache.get(id);
+      if (!el || !el.isConnected) {
+        el = document.getElementById(id);
+        if (el) domCache.set(id, el);
+      }
+      return el;
+    }
+
+    /* 静态元素集合只在启动时查询一次：这些节点在运行期只改属性，不会被整体替换 */
+    const roleButtons = document.querySelectorAll(".role");
+    const tabButtons = document.querySelectorAll(".tab");
+    const panelEls = document.querySelectorAll(".panel");
+    const roleTabButtons = document.querySelectorAll(".tab.role-tab");
+    const primaryCtaButtons = document.querySelectorAll(".sec-head .actions .btn:not(.ghost)");
+
     /* ---------------- 渲染 ---------------- */
-    const artGrid = document.getElementById("artGrid");
+    const artGrid = $id("artGrid");
     artGrid.innerHTML = artworks.map((w, i) => `
   <article class="card art">
     <div class="thumb">
@@ -3089,7 +3241,7 @@
   </article>
 `).join("");
 
-    const commissionGrid = document.getElementById("commissionGrid");
+    const commissionGrid = $id("commissionGrid");
     commissionGrid.innerHTML = artists.map(a => `
   <article class="card artist">
     <div class="top">
@@ -3112,7 +3264,7 @@
   </article>
 `).join("");
 
-    const goodsGrid = document.getElementById("goodsGrid");
+    const goodsGrid = $id("goodsGrid");
     goodsGrid.innerHTML = goods.map((g, i) => `
   <article class="card good">
     <div class="thumb">
@@ -3131,7 +3283,7 @@
 `).join("");
 
     /* ---------------- 交互 ---------------- */
-    const toastEl = document.getElementById("toast");
+    const toastEl = $id("toast");
     let toastTimer;
     function toast(msg) {
       toastEl.textContent = msg;
@@ -3142,37 +3294,37 @@
 
     /* 身份选择 */
     let currentRole = null;
-    const roleEcho = document.getElementById("roleEcho");
-    document.querySelectorAll(".role").forEach(btn => {
-      btn.addEventListener("click", () => {
-        currentRole = btn.dataset.role;
-        document.querySelectorAll(".role").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
-        roleEcho.textContent = roleTitle(currentRole);
-      });
-    });
+    const roleEcho = $id("roleEcho");
+    /* 身份选择：单选取代 + 回显当前身份 */
+    function selectRole(btn) {
+      currentRole = btn.dataset.role;
+      roleButtons.forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+      roleEcho.textContent = roleTitle(currentRole);
+    }
+    roleButtons.forEach(btn => btn.addEventListener("click", () => selectRole(btn)));
 
     /* 登录 */
-    document.getElementById("loginBtn").addEventListener("click", () => {
+    $id("loginBtn").addEventListener("click", () => {
       if (!currentRole) { toast("请先选择一个身份"); return; }
-      const nick = document.getElementById("nickname").value.trim();
+      const nick = $id("nickname").value.trim();
       if (!nick) { toast("请输入昵称"); return; }
 
-      document.getElementById("roleChip").textContent = roleTitle(currentRole);
+      $id("roleChip").textContent = roleTitle(currentRole);
       applyRole(currentRole);
       renderRoleMenu();
       switchTab(currentRole === "创作者" ? "workbench" : "art");
 
-      const auth = document.getElementById("auth");
-      const app = document.getElementById("app");
+      const auth = $id("auth");
+      const app = $id("app");
       auth.classList.add("hide");
       setTimeout(() => { auth.style.display = "none"; app.classList.add("show"); window.scrollTo(0, 0); }, 380);
       toast("欢迎回来，" + nick + "（" + roleShort(currentRole) + "）");
     });
 
     /* ================= 顶部右侧身份切换器 ================= */
-    const roleChipBtn = document.getElementById("roleChipBtn");
-    const roleMenu = document.getElementById("roleMenu");
-    const roleChip = document.getElementById("roleChip");
+    const roleChipBtn = $id("roleChipBtn");
+    const roleMenu = $id("roleMenu");
+    const roleChip = $id("roleChip");
 
     function renderRoleMenu() {
       roleMenu.innerHTML =
@@ -3215,36 +3367,40 @@
     });
 
     /* 退出 */
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      const auth = document.getElementById("auth");
-      const app = document.getElementById("app");
+    $id("logoutBtn").addEventListener("click", () => {
+      const auth = $id("auth");
+      const app = $id("app");
       app.classList.remove("show");
       auth.style.display = "";
       requestAnimationFrame(() => auth.classList.remove("hide"));
       window.scrollTo(0, 0);
     });
 
-    /* Tab 切换 */
+    /* Tab 切换：复用启动时缓存的集合，避免每次点击都重新查询 DOM */
     function switchTab(name) {
-      document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.panel === name));
-      document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + name));
+      tabButtons.forEach(t => t.classList.toggle("active", t.dataset.panel === name));
+      panelEls.forEach(p => p.classList.toggle("active", p.id === "panel-" + name));
     }
-    document.getElementById("tabs").addEventListener("click", e => {
+
+    /* 窄屏导航栏展开状态：tab 点击与空白处点击共用 */
+    function setNavOpen(open) {
+      $id("tabs").classList.toggle("open", open);
+    }
+
+    $id("tabs").addEventListener("click", e => {
       const tab = e.target.closest(".tab");
-      if (tab) {
-        switchTab(tab.dataset.panel);
-        /* 窄屏：点了 tab 自动收起下拉菜单 */
-        document.getElementById("tabs").classList.remove("open");
-      }
+      if (!tab) return;
+      switchTab(tab.dataset.panel);
+      setNavOpen(false);   /* 窄屏：点了 tab 自动收起下拉菜单 */
     });
 
     /* 汉堡菜单：点击展开/收起 */
-    document.getElementById("navHam").addEventListener("click", () => {
-      document.getElementById("tabs").classList.toggle("open");
+    $id("navHam").addEventListener("click", () => {
+      $id("tabs").classList.toggle("open");
     });
     /* 点击空白处收起汉堡菜单 */
     document.addEventListener("click", e => {
-      if (!e.target.closest("header.nav")) document.getElementById("tabs").classList.remove("open");
+      if (!e.target.closest("header.nav")) setNavOpen(false);
     });
 
     /* 点赞 */
@@ -3264,7 +3420,7 @@
 
     /* 购物车 */
     let cartCount = 0;
-    const cartBadge = document.getElementById("cartBadge");
+    const cartBadge = $id("cartBadge");
     goodsGrid.addEventListener("click", e => {
       const btn = e.target.closest("[data-add]");
       if (!btn) return;
@@ -3272,34 +3428,52 @@
       cartBadge.textContent = cartCount;
       toast("已加入购物车（共 " + cartCount + " 件）");
     });
-    document.getElementById("cartBtn").addEventListener("click", () => {
+    $id("cartBtn").addEventListener("click", () => {
       toast(cartCount ? "购物车共 " + cartCount + " 件商品" : "购物车还是空的");
     });
 
     /* 提交约稿 */
-    document.getElementById("submitCommission").addEventListener("click", () => {
-      const desc = document.getElementById("cDesc").value.trim();
+    $id("submitCommission").addEventListener("click", () => {
+      const desc = $id("cDesc").value.trim();
       if (!desc) { toast("请填写需求描述"); return; }
       toast("约稿需求已提交，等待画师回复");
-      document.getElementById("cDesc").value = "";
+      $id("cDesc").value = "";
     });
 
-    /* 身份差异化提示 */
-    function applyRole(role) {
-      const cfg = roleConfig[role];
-      const map = { "note-art": cfg.art, "note-commission": cfg.commission, "note-goods": cfg.goods };
-      Object.entries(map).forEach(([id, text]) => {
-        const el = document.getElementById(id);
+    /* ---------- 身份差异化视图（拆成 4 个单一职责的小函数） ---------- */
+    /* 1) 三个板块的角色视角说明 */
+    function renderRoleNotes(role, cfg) {
+      const notes = { "note-art": cfg.art, "note-commission": cfg.commission, "note-goods": cfg.goods };
+      Object.entries(notes).forEach(([id, text]) => {
+        const el = $id(id);
         el.innerHTML = "<b>" + roleTitle(role) + "视角：</b>" + text;
         el.classList.add("show");
       });
-      const primary = document.querySelectorAll(".sec-head .actions .btn:not(.ghost)");
-      primary.forEach(b => { b.textContent = cfg.cta; });
+    }
 
-      /* 创作者专属板块：排单工作台 / 周边定制 */
-      document.querySelectorAll(".tab.role-tab").forEach(t => t.classList.toggle("show", role === "创作者"));
+    /* 2) 各板块主按钮文案 */
+    function updateRoleCta(text) {
+      primaryCtaButtons.forEach(b => { b.textContent = text; });
+    }
+
+    /* 3) 创作者专属 tab 的显隐（排单工作台 / 周边定制） */
+    function toggleCreatorTabs(isCreator) {
+      roleTabButtons.forEach(t => t.classList.toggle("show", isCreator));
+    }
+
+    /* 4) 切离创作者时，若正停留在创作者专属面板则退回作品区 */
+    function ensurePanelAllowed(role) {
+      if (role === "创作者") return;
       const activePanel = document.querySelector(".panel.active");
-      if (role !== "创作者" && activePanel && activePanel.classList.contains("artist-only")) switchTab("art");
+      if (activePanel && activePanel.classList.contains("artist-only")) switchTab("art");
+    }
+
+    function applyRole(role) {
+      const cfg = roleConfig[role];
+      renderRoleNotes(role, cfg);
+      updateRoleCta(cfg.cta);
+      toggleCreatorTabs(role === "创作者");
+      ensurePanelAllowed(role);
     }
 
     /* ================= 排单工作台（画师） ================= */
@@ -3406,9 +3580,9 @@
       ]
     };
 
-    const wbWorking = document.getElementById("wbWorking");
-    const wbBooking = document.getElementById("wbBooking");
-    const wbDetail = document.getElementById("wbDetail");
+    const wbWorking = $id("wbWorking");
+    const wbBooking = $id("wbBooking");
+    const wbDetail = $id("wbDetail");
     const chatReplyPool = [
       "好的老师～那就按这个方案来！",
       "收到！我这边随时可以确认，麻烦老师了。",
@@ -3449,15 +3623,15 @@
     function renderBoards() {
       wbWorking.innerHTML = orders.working.map(orderCard).join("") || `<div class="empty-note">暂无进行中的排单</div>`;
       wbBooking.innerHTML = orders.booking.map(orderCard).join("") || `<div class="empty-note">暂无预约申请</div>`;
-      document.getElementById("wbCountWorking").textContent = orders.working.length + " 单";
-      document.getElementById("wbCountBooking").textContent = orders.booking.length + " 单";
+      $id("wbCountWorking").textContent = orders.working.length + " 单";
+      $id("wbCountBooking").textContent = orders.booking.length + " 单";
       document.querySelectorAll(".order").forEach(b => b.classList.toggle("active", !!curOrder && b.dataset.id === curOrder.id));
     }
 
-    function renderDetail(o) {
-      const d = o.demand;
-      const isBooking = o.progress < 0;
-      wbDetail.innerHTML = `
+    /* ---------- 订单详情（按区块拆成多个渲染片段，便于单独调整） ---------- */
+    /* 顶部：买家头像 / 名称 / 日期 / 状态徽标 */
+    function detailHeader(o, isBooking) {
+      return `
     <div class="buyer-head">
       <div class="av">${o.name.slice(0, 1)}</div>
       <div>
@@ -3471,17 +3645,29 @@
       <div class="f">预算<b>￥${o.budget}</b></div>
       <div class="f">交稿日期<b>${o.due}</b></div>
       <div class="f">${isBooking ? "当前状态" : "当前进度"}<b>${isBooking ? "待排期" : o.progress + "%"}</b></div>
-    </div>
+    </div>`;
+    }
 
+    /* 中部：买家诉求与参考图 */
+    function detailDemand(o) {
+      const d = o.demand;
+      const refs = o.refs && o.refs.length
+        ? `<div class="refs">${o.refs.map(r => `<img src="${r}" alt="参考图" loading="lazy" />`).join("")}</div>`
+        : "";
+      return `
     <div class="demand">
       <h4>买家诉求</h4>
       <p>${d.chars}</p>
-      ${o.refs && o.refs.length ? `<div class="refs">${o.refs.map(r => `<img src="${r}" alt="参考图" loading="lazy" />`).join("")}</div>` : ""}
+      ${refs}
       <p><b>用途与授权：</b>${d.usage}</p>
       <p><b>交付要求：</b>${d.deliver}</p>
       <p><b>备注：</b>${d.extra}</p>
-    </div>
+    </div>`;
+    }
 
+    /* 操作区：预约状态给出接单/报价/婉拒，进行中给出交付/更新进度 */
+    function detailActions(isBooking) {
+      return `
     <div class="wb-actions">
       ${isBooking
           ? `<button class="btn sm" data-act="accept">接单并排期</button>
@@ -3489,8 +3675,12 @@
            <button class="btn ghost sm" data-act="reject">婉拒</button>`
           : `<button class="btn sm" data-act="deliver">提交交付</button>
            <button class="btn ghost sm" data-act="progress">更新进度</button>`}
-    </div>
+    </div>`;
+    }
 
+    /* 底部：即时对话区 */
+    function detailChat(o) {
+      return `
     <div class="chat">
       <h4>即时对话</h4>
       <div class="chat-log" id="chatLog">${o.msgs.map(msgHtml).join("")}</div>
@@ -3504,14 +3694,23 @@
         <button class="btn sm" id="chatSend">发送</button>
       </div>
     </div>`;
+    }
 
-      const log = document.getElementById("chatLog");
+    /* 组装详情面板，并让消息列表滚到最新一条 */
+    function renderDetail(o) {
+      const isBooking = o.progress < 0;
+      wbDetail.innerHTML =
+        detailHeader(o, isBooking) +
+        detailDemand(o) +
+        detailActions(isBooking) +
+        detailChat(o);
+      const log = $id("chatLog");
       log.scrollTop = log.scrollHeight;
     }
 
     function pushMsg(m) {
       curOrder.msgs.push(m);
-      const log = document.getElementById("chatLog");
+      const log = $id("chatLog");
       if (!log) return;
       log.insertAdjacentHTML("beforeend", msgHtml(m));
       log.scrollTop = log.scrollHeight;
@@ -3519,7 +3718,7 @@
 
     function sendMsg(text) {
       if (!curOrder) return;
-      const input = document.getElementById("chatInput");
+      const input = $id("chatInput");
       const val = (text !== undefined ? text : input.value).trim();
       if (!val) return;
       pushMsg({ me: true, t: val, time: nowLabel() });
@@ -3532,36 +3731,52 @@
       }, 1100);
     }
 
-    function doAction(act) {
-      if (!curOrder) return;
-      const o = curOrder;
-      if (act === "accept") {
+    /* ---------- 订单动作表：一个动作一个独立处理函数，新增动作只需追加一项 ---------- */
+    const orderActions = {
+      /* 接单：从预约移入正在排单 */
+      accept(o) {
         orders.booking = orders.booking.filter(x => x.id !== o.id);
         o.progress = 10;
         o.stage = "已接单";
         o.pillClass = "warn";
         orders.working.unshift(o);
         toast("已接单：" + o.name + "，已加入正在排单");
-      } else if (act === "quote") {
+      },
+      /* 报价：发送报价单消息 */
+      quote(o) {
         sendMsg("报价单已发送：￥" + o.budget + "，含 " + o.demand.deliver.slice(0, 12) + "…");
         toast("已向 " + o.name + " 发送报价单");
-      } else if (act === "reject") {
+      },
+      /* 婉拒：移除预约并清空详情（清空 curOrder 后不再重新渲染详情） */
+      reject(o) {
         orders.booking = orders.booking.filter(x => x.id !== o.id);
         curOrder = null;
         renderBoards();
         wbDetail.innerHTML = `<div class="empty">已婉拒该预约<br />点击左侧买家卡片查看其他诉求</div>`;
         toast("已婉拒 " + o.name + " 的预约");
-        return;
-      } else if (act === "deliver") {
+      },
+      /* 交付：进度置满并转入待验收 */
+      deliver(o) {
         o.progress = 100;
         o.stage = "待验收";
         o.pillClass = "ok";
         toast("已向 " + o.name + " 提交交付");
-      } else if (act === "progress") {
+      },
+      /* 推进进度：每次 +15%，满 100% 自动转待验收 */
+      progress(o) {
         o.progress = Math.min(100, o.progress + 15);
         if (o.progress >= 100) { o.stage = "待验收"; o.pillClass = "ok"; }
         toast("进度已更新为 " + o.progress + "%");
       }
+    };
+
+    function doAction(act) {
+      if (!curOrder) return;
+      const handler = orderActions[act];
+      if (!handler) return;
+      const o = curOrder;
+      handler(o);
+      if (o !== curOrder) return;   /* 婉拒后 curOrder 已清空，无需再渲染详情 */
       renderBoards();
       renderDetail(o);
     }
@@ -3631,17 +3846,17 @@
       pack: "简装（OPP 袋）", sample: true, price: 0, priceTouched: false
     };
 
-    const panelCustom = document.getElementById("panel-custom");
-    const artPick = document.getElementById("artPick");
-    const craftPick = document.getElementById("craftPick");
-    const merchList = document.getElementById("merchList");
-    const merchHint = document.getElementById("merchHint");
-    const paramGrid = document.getElementById("paramGrid");
-    const wsPreview = document.getElementById("wsPreview");
-    const shelfGridOpen = document.getElementById("shelfGridOpen");
-    const shelfGridClosed = document.getElementById("shelfGridClosed");
-    const spCountOpen = document.getElementById("spCountOpen");
-    const spCountClosed = document.getElementById("spCountClosed");
+    const panelCustom = $id("panel-custom");
+    const artPick = $id("artPick");
+    const craftPick = $id("craftPick");
+    const merchList = $id("merchList");
+    const merchHint = $id("merchHint");
+    const paramGrid = $id("paramGrid");
+    const wsPreview = $id("wsPreview");
+    const shelfGridOpen = $id("shelfGridOpen");
+    const shelfGridClosed = $id("shelfGridClosed");
+    const spCountOpen = $id("spCountOpen");
+    const spCountClosed = $id("spCountClosed");
 
     const money = n => "￥" + (Math.round(n * 100) / 100).toLocaleString("zh-CN");
     const craftMerchants = () => merchants.map((_, i) => i).filter(i => merchants[i].crafts.includes(custom.craft));
@@ -3825,7 +4040,7 @@
       });
       renderShelf();
       toast("已向 " + c.m.n + " 提交定制订单，预计 " + c.days + " 天出货，商品已放入橱窗");
-      document.getElementById("panel-custom").scrollIntoView({ behavior: "smooth", block: "center" });
+      $id("panel-custom").scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     function toggleShelf(id) {
@@ -3877,37 +4092,70 @@
     renderShelf();
 
     /* ================= 绘画（三种身份通用） ================= */
-    const panelDraw = document.getElementById("panel-draw");
-    const drawCanvas = document.getElementById("drawCanvas");
+    const panelDraw = $id("panel-draw");
+    const drawCanvas = $id("drawCanvas");
     const dctx = drawCanvas.getContext("2d", { willReadFrequently: true });
-    const drawOverlay = document.getElementById("drawOverlay");
+    const drawOverlay = $id("drawOverlay");
     const octx = drawOverlay.getContext("2d");
     const CW = drawCanvas.width, CH = drawCanvas.height;
-    const swatches = document.getElementById("swatches");
-    const gapList = document.getElementById("gapList");
-    const tipBrush = document.getElementById("tipBrush");
-    const tipGap = document.getElementById("tipGap");
-    const refChips = document.getElementById("refChips");
+    const swatches = $id("swatches");
+    const gapList = $id("gapList");
+    const tipBrush = $id("tipBrush");
+    const tipGap = $id("tipGap");
+    const refChips = $id("refChips");
 
     const palette = ["#f2ece0", "#e7c078", "#e88fb1", "#7fa8e8", "#8fd9a8", "#d97b7b", "#8a8095"];
-    const toolNames = { pen: "铅笔", marker: "马克笔", airbrush: "喷枪", eraser: "橡皮", wand: "魔棒填色" };
+    const toolNames = { pen: "铅笔", marker: "马克笔", airbrush: "喷枪", eraser: "橡皮", wand: "魔棒填色", pick: "取色吸管", move: "移动图片" };
     const brush = { tool: "pen", size: 5, opacity: 100, color: "#f2ece0" };
 
     let gaps = [], activeGap = null, lastData = null;
     let gapSk = null, gapW = 0, gapH = 0, gapScale = 2;   /* 最近一次扫描的骨架，供曲线闭合取切线方向 */
-    let closedHistory = [];                                 /* 闭合历史，供逐条撤回 */
-    let pendingGap = null;                                  /* 大缺口弹框中待处理的缺口 */
+    let closeActions = [];                                  /* 闭合动作组：单缺口 / 一键全部，供总撤回 */
+    let repairLog = [];                                     /* 缺口位置 → 已被自动修复次数（反复出现判定） */
+    let pendingGap = null;                                  /* 顽固缺口弹框中待处理的缺口 */
     let sensMinGap = 2;                                     /* 灵敏度：忽略小于此像素的缺口 */
+    let scanMode = "outer";                                 /* outer=外轮廓检测，partial=部分检测 */
+    let regionMask = null, regionEdge = null, regionBounds = null;  /* 部分检测范围与边界 */
+    let regionMaskRaw = null, regionCount = 0;                     /* 未做边界微调的范围 / 范围像素数 */
+    let regionExpand = 2;                                   /* 边界微调：正=向外扩，负=向内收 */
+    let regionArmed = false, regionOp = "base";             /* 圈选待命；op=base|add|sub */
+    let lassoPts = null;                                   /* 自由圈选过程中的轨迹点 */
+    let regionSeq = 0;
+    let regionPhase = 0, regionAnimId = null;               /* 黑色流动虚线相位 */
+    const grayCanvas = document.createElement("canvas");    /* 半透明灰色蒙层（范围外覆盖） */
+    grayCanvas.width = CW; grayCanvas.height = CH;
+    const grayCtx = grayCanvas.getContext("2d");
+    const holeCanvas = document.createElement("canvas");   /* 范围内挖洞用的临时画布 */
+    holeCanvas.width = CW; holeCanvas.height = CH;
+    const holeCtx = holeCanvas.getContext("2d");
+    let holeImg = null, grayReady = false;
     let fillColor = "#7fa8e8", wandTolerance = 32;
     let wandSel = null;                                     /* 魔棒选区 {mask:Uint8Array, w, h, bounds} */
     let wandAnimId = null;
     let undoStack = [], redoStack = [];
     const HIST_MAX = 10;
 
+    /* 导入图片层：底图与笔迹分开存放，检测 / 取色 / 魔棒 / 导出统一读「底图 + 笔迹」合成分 */
+    const underlayEl = $id("drawUnderlay");
+    let imgData = null, imgBox = null, imgReady = false;    /* 原图对象 / 底图在画布坐标中的 {x,y,w,h} */
+    let imgUrl = "";                                        /* 底图的 object URL，换图 / 清空时释放 */
+    let imgInvalTimer = 0, imgDrag = null;                  /* 拖动状态与缺口失效节流 */
+    let viewZoom = 1;                                       /* 画布视图缩放：只改显示尺寸，坐标映射由 rect 自动换算 */
+
+    const compCanvas = document.createElement("canvas");
+    compCanvas.width = CW; compCanvas.height = CH;
+    const compCtx = compCanvas.getContext("2d", { willReadFrequently: true });
+
     function updateTip() {
       if (brush.tool === "wand") {
         tipBrush.textContent = "魔棒填色 · 容差 " + wandTolerance;
         drawCanvas.style.cursor = "crosshair";
+      } else if (brush.tool === "pick") {
+        tipBrush.textContent = "取色吸管 · 点击画布吸取颜色";
+        drawCanvas.style.cursor = "crosshair";
+      } else if (brush.tool === "move") {
+        tipBrush.textContent = "移动图片 · 拖动移动 / 滚轮缩放";
+        drawCanvas.style.cursor = "grab";
       } else {
         tipBrush.textContent = toolNames[brush.tool] + " " + brush.size + "px";
         drawCanvas.style.cursor = "";
@@ -3917,7 +4165,7 @@
     function renderSwatches() {
       swatches.innerHTML = palette.map(c =>
         `<button class="sw ${c === brush.color ? "on" : ""}" data-sw="${c}" style="background:${c}" title="${c}"></button>`).join("");
-      document.getElementById("brushColor").value = brush.color;
+      $id("brushColor").value = brush.color;
     }
 
     function setColor(c) {
@@ -3927,14 +4175,89 @@
 
     function setTool(t) {
       brush.tool = t;
+      if (t === "move") { regionArmed = false; lassoPts = null; }   /* 切到移动工具时退出圈选待命，避免误圈 */
       panelDraw.querySelectorAll("[data-tool]").forEach(b => b.classList.toggle("on", b.dataset.tool === t));
       updateTip();
     }
 
+    /* ---------- 导入图片层：适配 / 定位 / 合成分 ---------- */
+    /* 图片不超出画框：比画框小的图整体留在框内；比画框大的图可以放大查看，但边缘不会露白 */
+    function clampImgBox() {
+      const minX = Math.min(0, CW - imgBox.w), maxX = Math.max(0, CW - imgBox.w);
+      const minY = Math.min(0, CH - imgBox.h), maxY = Math.max(0, CH - imgBox.h);
+      imgBox.x = Math.max(minX, Math.min(maxX, imgBox.x));
+      imgBox.y = Math.max(minY, Math.min(maxY, imgBox.y));
+    }
+
+    /* 底图按百分比定位：画框随视图缩放改变尺寸，百分比与 1000×680 画布坐标严格线性对应，缩放后不会错位 */
+    function applyImgView() {
+      if (!imgReady || !imgBox) { underlayEl.style.display = "none"; return; }
+      underlayEl.style.display = "block";
+      underlayEl.style.left = (imgBox.x / CW * 100) + "%";
+      underlayEl.style.top = (imgBox.y / CH * 100) + "%";
+      underlayEl.style.width = (imgBox.w / CW * 100) + "%";
+      underlayEl.style.height = (imgBox.h / CH * 100) + "%";
+    }
+
+    function clearImageLayer() {
+      imgData = null; imgBox = null; imgReady = false; imgDrag = null;
+      underlayEl.style.display = "none";
+      underlayEl.removeAttribute("src");
+      if (imgUrl) { URL.revokeObjectURL(imgUrl); imgUrl = ""; }
+    }
+
+    /* 合成分 = 底图（可选白底）+ 笔迹；所有按像素读画布的算法都走这里 */
+    function drawComposite(ctx, whiteBg) {
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, CW, CH);
+      if (whiteBg) { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, CW, CH); }
+      if (imgReady && imgData && imgBox) ctx.drawImage(imgData, imgBox.x, imgBox.y, imgBox.w, imgBox.h);
+      ctx.drawImage(drawCanvas, 0, 0);
+      ctx.restore();
+    }
+
+    function compositeCanvas(whiteBg) {
+      drawComposite(compCtx, whiteBg);
+      return compCanvas;
+    }
+
+    /* 图片被移动 / 缩放后旧的缺口标记作废；连续拖动时只提示一次，避免刷屏 */
+    function markImgMoved() {
+      if (imgInvalTimer) return;
+      imgInvalTimer = setTimeout(() => { imgInvalTimer = 0; }, 600);
+      invalidateGaps("图片已调整，点击「开始扫描」重新检测缺口。");
+    }
+
+    /* 以画布坐标 anchor 为锚点缩放底图：锚点下的像素保持不动，缩放不会让图片漂移 */
+    function zoomImageAt(anchor, s) {
+      if (!imgReady || !imgBox) return;
+      const ratio = imgBox.w / imgBox.h;
+      let nw = imgBox.w * s, nh = imgBox.h * s;
+      if (nw < 60) { nw = 60; nh = nw / ratio; }
+      if (nw > 4000) { nw = 4000; nh = nw / ratio; }
+      const rx = (anchor.x - imgBox.x) / imgBox.w;   /* 锚点在图片内的相对位置 */
+      const ry = (anchor.y - imgBox.y) / imgBox.h;
+      imgBox.w = nw; imgBox.h = nh;
+      imgBox.x = anchor.x - rx * nw;
+      imgBox.y = anchor.y - ry * nh;
+      clampImgBox();
+      applyImgView();
+      markImgMoved();
+    }
+
+    function setViewZoom(z) {
+      viewZoom = Math.min(3, Math.max(0.5, z));
+      $id("canvasWrap").style.width = (viewZoom * 100) + "%";
+      toast("画布视图 " + Math.round(viewZoom * 100) + "%");
+    }
+
+
     function setSidePane(name) {
       panelDraw.querySelectorAll(".side-tab").forEach(b => b.classList.toggle("active", b.dataset.pane === name));
-      document.getElementById("pane-gaps").classList.toggle("active", name === "gaps");
-      document.getElementById("pane-refs").classList.toggle("active", name === "refs");
+      $id("pane-gaps").classList.toggle("active", name === "gaps");
+      $id("pane-refs").classList.toggle("active", name === "refs");
     }
 
     /* ---------- 画布 / 笔刷 ---------- */
@@ -4032,15 +4355,17 @@
     function invalidateGaps(msg) {
       gaps = [];
       activeGap = null;
-      octx.clearRect(0, 0, CW, CH);
       lastData = null;
       gapList.innerHTML = `<div class="empty-note">${msg || "画布已修改，点击「开始扫描」重新检测缺口。"}</div>`;
       tipGap.textContent = "缺口检测：尚未扫描";
+      drawOverlayGaps();   /* 清空缺口标记，但保留部分检测的灰色蒙层与流动虚线范围 */
     }
 
     function clearCanvas() {
       snapshot();
       dctx.clearRect(0, 0, CW, CH);
+      clearImageLayer();
+      if (brush.tool === "move") setTool("pen");
       invalidateGaps("画布已清空。画几笔或载入示例线稿，再点击「开始扫描」。");
       toast("画布已清空");
     }
@@ -4048,6 +4373,8 @@
     function loadSample() {
       snapshot();
       dctx.clearRect(0, 0, CW, CH);
+      clearImageLayer();
+      if (brush.tool === "move") setTool("pen");
       dctx.save();
       dctx.globalCompositeOperation = "source-over";
       dctx.globalAlpha = 1;
@@ -4091,6 +4418,25 @@
 
     drawCanvas.addEventListener("pointerdown", e => {
       const p = canvasPos(e);
+      /* 取色吸管：只吸取画布颜色，不在画布上落笔 */
+      if (brush.tool === "pick") { pickColor(p); return; }
+      /* 部分检测处于圈选待命：自由圈出范围（优先于移动工具，避免误拖图片） */
+      if (scanMode === "partial" && regionArmed) {
+        drawCanvas.setPointerCapture(e.pointerId);
+        lassoPts = [p];
+        refreshGray();
+        drawOverlayGaps();
+        return;
+      }
+      /* 移动工具：拖动导入图片（不落笔，仅调整底图位置） */
+      if (brush.tool === "move") {
+        if (!imgReady || !imgBox) { toast("还没有导入图片，先点「导入图片」"); return; }
+        imgDrag = { sx: p.x, sy: p.y, ox: imgBox.x, oy: imgBox.y };
+        try { drawCanvas.setPointerCapture(e.pointerId); } catch (err) { }
+        drawCanvas.style.cursor = "grabbing";
+        markImgMoved();
+        return;
+      }
       if (brush.tool === "wand") { wandSelect(p); return; }
       const hit = hitGap(p);
       if (hit >= 0) { selectGap(hit); return; }
@@ -4103,6 +4449,24 @@
     });
 
     drawCanvas.addEventListener("pointermove", e => {
+      if (imgDrag) {
+        const p = canvasPos(e);
+        imgBox.x = imgDrag.ox + (p.x - imgDrag.sx);
+        imgBox.y = imgDrag.oy + (p.y - imgDrag.sy);
+        clampImgBox();
+        applyImgView();
+        return;
+      }
+      if (lassoPts) {
+        const p = canvasPos(e);
+        const last = lassoPts[lassoPts.length - 1];
+        if (Math.hypot(p.x - last.x, p.y - last.y) >= 3) {
+          lassoPts.push(p);
+          refreshGray();       /* 圈内实时去掉灰色蒙层 */
+          drawOverlayGaps();
+        }
+        return;
+      }
       if (!drawing) return;
       const p = canvasPos(e);
       strokeTo(lastPt, p);
@@ -4110,20 +4474,30 @@
     });
 
     ["pointerup", "pointercancel", "pointerleave"].forEach(ev =>
-      drawCanvas.addEventListener(ev, () => { drawing = false; lastPt = null; }));
+      drawCanvas.addEventListener(ev, () => {
+        if (imgDrag) {
+          imgDrag = null;
+          applyImgView();
+          drawCanvas.style.cursor = brush.tool === "move" ? "grab" : "";
+          markImgMoved();
+        }
+        if (lassoPts) {
+          const pts = lassoPts;
+          lassoPts = null;
+          finishLasso(pts);
+        }
+        drawing = false;
+        lastPt = null;
+      }));
+
+    /* 移动工具下滚轮缩放底图（以光标为锚点）；其它工具滚轮保持画布视图的正常滚动 */
+    drawCanvas.addEventListener("wheel", e => {
+      if (brush.tool !== "move" || !imgReady) return;
+      e.preventDefault();
+      zoomImageAt(canvasPos(e), e.deltaY < 0 ? 1.12 : 1 / 1.12);
+    }, { passive: false });
 
     /* ---------- 线稿缺口检测 ---------- */
-    const N8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
-
-    function nbList(g, w, h, x, y) {
-      const out = [];
-      for (let k = 0; k < 8; k++) {
-        const nx = x + N8[k][0], ny = y + N8[k][1];
-        if (nx >= 0 && ny >= 0 && nx < w && ny < h && g[ny * w + nx]) out.push(ny * w + nx);
-      }
-      return out;
-    }
-
     /* ---------- 缺口检测算法库（同一份源码注入 Web Worker 后台执行，Worker 不可用时主线程兜底） ---------- */
     const SCAN_LIB = `
 const N8 = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
@@ -4301,7 +4675,190 @@ function skelTangent(sk,w,h,startIdx,steps){
   const len=Math.hypot(vx,vy)||1;
   return {x:vx/len,y:vy/len};
 }
-function detectGaps(buf,CW,CH,sens){
+/* 中位数：排序副本，样本量小，开销可接受 */
+function median(arr){
+  if(!arr.length) return 0;
+  const a=arr.slice().sort(function(p,q){return p-q;});
+  const m=a.length>>1;
+  return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+/* 局部线宽：端点附近行/列墨迹连续长度的中位数，取较小者近似笔画粗细（骨架尺度） */
+function localWidthAt(grid,w,h,x,y){
+  const rows=[], cols=[];
+  for(let d=-2;d<=2;d++){
+    const yy=y+d;
+    if(yy>=0&&yy<h&&grid[yy*w+x]){
+      let l=0,r=0;
+      while(x-l-1>=0&&grid[yy*w+x-l-1]) l++;
+      while(x+r+1<w&&grid[yy*w+x+r+1]) r++;
+      rows.push(l+r+1);
+    }
+    const xx=x+d;
+    if(xx>=0&&xx<w&&grid[y*w+xx]){
+      let u=0,v=0;
+      while(y-u-1>=0&&grid[(y-u-1)*w+xx]) u++;
+      while(y+v+1<h&&grid[(y+v+1)*w+xx]) v++;
+      cols.push(u+v+1);
+    }
+  }
+  const mr=median(rows), mc=median(cols);
+  return (mr&&mc)?Math.min(mr,mc):(mr||mc||0);
+}
+/* 线稿颜色：取缺口两端附近偏暗的墨迹像素中位数，输出 #rrggbb */
+function inkColorHex(data,CW,CH,ax,ay,bx,by){
+  const samples=[];
+  const centers=[[ax,ay],[bx,by]];
+  for(let c=0;c<2;c++){
+    const cx=Math.round(centers[c][0]), cy=Math.round(centers[c][1]);
+    for(let dy=-7;dy<=7;dy++){
+      for(let dx=-7;dx<=7;dx++){
+        if(dx*dx+dy*dy>49) continue;
+        const px=cx+dx, py=cy+dy;
+        if(px<0||py<0||px>=CW||py>=CH) continue;
+        const k=(py*CW+px)*4;
+        if(data[k+3]<50) continue;
+        const lum=data[k]*0.299+data[k+1]*0.587+data[k+2]*0.114;
+        samples.push({r:data[k],g:data[k+1],b:data[k+2],l:lum});
+      }
+    }
+  }
+  if(!samples.length) return null;
+  samples.sort(function(p,q){return p.l-q.l;});
+  const n=Math.max(3,Math.round(samples.length*0.4));
+  const rr=[],gg=[],bb=[];
+  for(let i=0;i<n;i++){ rr.push(samples[i].r); gg.push(samples[i].g); bb.push(samples[i].b); }
+  const hx=function(v){ const s=Math.max(0,Math.min(255,Math.round(v))).toString(16); return s.length<2?"0"+s:s; };
+  return "#"+hx(median(rr))+hx(median(gg))+hx(median(bb));
+}
+/* 外轮廓墨迹带：先把整幅墨迹向外膨胀 R 像素，让发丝、五官之间的窄白缝并进同一个「剪影」，
+   再从画面四边泛洪出剪影之外的白区（真正的画面外部）；离这片外部白区不超过 R+10 的墨迹才算外轮廓。
+   内部线条被剪影包住，离画面外部很远，不再参与缺口配对。 */
+function outerBand(grid,w,h){
+  const n=w*h, R=12, LIM=R+10;
+  const dist=new Int16Array(n); dist.fill(4095);
+  const q=new Int32Array(n);
+  let head=0, tail=0;
+  for(let i=0;i<n;i++) if(grid[i]){ dist[i]=0; q[tail++]=i; }
+  if(!tail) return new Uint8Array(n);
+  while(head<tail){                                   /* 墨迹外扩 R 像素，窄缝被并拢 */
+    const p=q[head++], d=dist[p];
+    if(d>=R) continue;
+    const x=p%w, y=(p-x)/w;
+    for(let k=0;k<8;k++){
+      const nx=x+N8[k][0], ny=y+N8[k][1];
+      if(nx<0||ny<0||nx>=w||ny>=h) continue;
+      const np=ny*w+nx;
+      if(dist[np]<=d+1) continue;
+      dist[np]=d+1; q[tail++]=np;
+    }
+  }
+  const blob=new Uint8Array(n);
+  for(let i=0;i<n;i++) if(dist[i]<=R) blob[i]=1;
+  const ext=new Uint8Array(n);                        /* 剪影之外的白区 */
+  const st=[];
+  for(let x=0;x<w;x++){ if(!blob[x]) st.push(x); if(!blob[(h-1)*w+x]) st.push((h-1)*w+x); }
+  for(let y=0;y<h;y++){ if(!blob[y*w]) st.push(y*w); if(!blob[y*w+w-1]) st.push(y*w+w-1); }
+  let extCount=0;
+  while(st.length){
+    const p=st.pop();
+    if(ext[p]||blob[p]) continue;
+    ext[p]=1; extCount++;
+    const x=p%w, y=(p-x)/w;
+    if(x>0) st.push(p-1);
+    if(x<w-1) st.push(p+1);
+    if(y>0) st.push(p-w);
+    if(y<h-1) st.push(p+w);
+  }
+  if(extCount<n*0.05) return grid.slice();            /* 画面几乎被墨迹占满，无从判断，退回全图 */
+  const near=new Int16Array(n); near.fill(4095);
+  head=0; tail=0;
+  for(let i=0;i<n;i++) if(ext[i]){ near[i]=0; q[tail++]=i; }
+  while(head<tail){                                   /* 外部白区向内延伸，覆盖外轮廓笔迹 */
+    const p=q[head++], d=near[p];
+    if(d>=LIM) continue;
+    const x=p%w, y=(p-x)/w;
+    for(let k=0;k<8;k++){
+      const nx=x+N8[k][0], ny=y+N8[k][1];
+      if(nx<0||ny<0||nx>=w||ny>=h) continue;
+      const np=ny*w+nx;
+      if(near[np]<=d+1) continue;
+      near[np]=d+1; q[tail++]=np;
+    }
+  }
+  const band=new Uint8Array(n);
+  for(let i=0;i<n;i++) if(grid[i]&&near[i]<=LIM) band[i]=1;
+  return band;
+}
+/* 部分检测：把自由圈选区域（base=1）用泛洪具体化 —— 从圈选区边界泛洪背景，
+   未被泛洪的像素（线稿笔迹与被线条围住的内部）即为系统识别出的范围；
+   再按 expand 做边界膨胀/腐蚀微调 */
+function refineRegion(data,w,h,base,expand){
+  let area=0;
+  for(let i=0;i<w*h;i++) if(base[i]) area++;
+  if(!area) return {mask:new Uint8Array(w*h),bounds:{minX:0,maxX:-1,minY:0,maxY:-1},count:0,leak:false};
+  const seen=new Uint8Array(w*h);
+  const stack=[];
+  /* 圈选区边界像素作为背景泛洪的种子 */
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const p=y*w+x;
+      if(!base[p]) continue;
+      if(x===0||y===0||x===w-1||y===h-1||!base[p-1]||!base[p+1]||!base[p-w]||!base[p+w]) stack.push(p);
+    }
+  }
+  let bgCount=0;
+  while(stack.length){
+    const p=stack.pop();
+    if(seen[p]) continue;
+    if(!base[p]) continue;
+    seen[p]=1;
+    const k=p*4;
+    const a=data[k+3];
+    const lum=a<50?255:(data[k]*0.299+data[k+1]*0.587+data[k+2]*0.114);
+    if(lum<200){ seen[p]=2; continue; }   /* 墨迹不参与背景泛洪 */
+    bgCount++;
+    const x=p%w, y=(p-x)/w;
+    if(x>0) stack.push(p-1);
+    if(x<w-1) stack.push(p+1);
+    if(y>0) stack.push(p-w);
+    if(y<h-1) stack.push(p+w);
+  }
+  /* 泛洪几乎吃掉整块 → 圈选范围内线条有开口漏出，退回自由圈选形状 */
+  const leak=bgCount>area*0.88;
+  let mask=new Uint8Array(w*h);
+  for(let i=0;i<w*h;i++){
+    if(base[i]&&(leak||seen[i]!==1)) mask[i]=1;
+  }
+  /* 边界微调：正数向外膨胀，负数向内腐蚀 */
+  const it=Math.min(16,Math.abs(Math.round(expand||0)));
+  let cur=mask;
+  for(let n=0;n<it;n++){
+    const next=new Uint8Array(w*h);
+    const grow=expand>0;
+    for(let y=1;y<h-1;y++){
+      const row=y*w;
+      for(let x=1;x<w-1;x++){
+        const p=row+x;
+        if(grow){
+          if(cur[p]) next[p]=1;
+          else if(cur[p-1]||cur[p+1]||cur[p-w]||cur[p+w]) next[p]=1;
+        }else if(cur[p]&&cur[p-1]&&cur[p+1]&&cur[p-w]&&cur[p+w]) next[p]=1;
+      }
+    }
+    cur=next;
+  }
+  let minX=w,maxX=-1,minY=h,maxY=-1,count=0;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      if(!cur[y*w+x]) continue;
+      count++;
+      if(x<minX)minX=x; if(x>maxX)maxX=x;
+      if(y<minY)minY=y; if(y>maxY)maxY=y;
+    }
+  }
+  return {mask:cur,bounds:{minX:minX,maxX:maxX,minY:minY,maxY:maxY},count:count,leak:leak};
+}
+function detectGaps(buf,CW,CH,sens,mode,reg){
   const data=new Uint8ClampedArray(buf);
   const scale=2;
   const bz=binarize(data,CW,CH,scale);
@@ -4323,6 +4880,15 @@ function detectGaps(buf,CW,CH,sens){
       eps.push({i:i,x:x,y:y,comp:lab[i],t:skelTangent(sk,w,h,i,8)});
     }
   }
+  /* 检测模式约束：外轮廓只保留贴近背景的外层墨迹端点；
+     部分检测要求缺口两端都落在泛洪细化出的范围内 */
+  const outer=mode==="outer"?outerBand(grid,w,h):null;
+  const inRegion=function(x,y){
+    if(!reg) return true;
+    const px=Math.min(CW-1,Math.max(0,Math.round((x+0.5)*scale)));
+    const py=Math.min(CH-1,Math.max(0,Math.round((y+0.5)*scale)));
+    return reg[py*CW+px]===1;
+  };
   /* 切线迎面预筛：真缺口两端的切线互相指向对方；
      发丝/线头等杂散端点方向随机，自动被过滤，密集发丝不再淹没真缺口。
      跨笔画（不同连通域）配对要求更强的迎面阈值；开口级额外要求互为最近端点。 */
@@ -4340,12 +4906,16 @@ function detectGaps(buf,CW,CH,sens){
       nearest=new Int32Array(eps.length).fill(-1);
       for(let a=0;a<eps.length;a++){
         if(used.has(a)) continue;
+        const A=eps[a];
         let best=-1, bd=Infinity;
         for(let b=0;b<eps.length;b++){
           if(b===a||used.has(b)) continue;
-          const dx=eps[a].x-eps[b].x, dy=eps[a].y-eps[b].y;
+          const dx=eps[b].x-A.x, dy=eps[b].y-A.y;
           const dd=dx*dx+dy*dy;
-          if(dd<bd){ bd=dd; best=b; }
+          if(dd>=bd) continue;
+          const len=Math.sqrt(dd);
+          if(A.t.x*dx/len+A.t.y*dy/len<0.3) continue;   /* 端点得朝着对方，同一笔画的另一头/背后端点不算候选 */
+          bd=dd; best=b;
         }
         nearest[a]=best;
       }
@@ -4367,6 +4937,8 @@ function detectGaps(buf,CW,CH,sens){
         if(A.t.x*ux+A.t.y*uy<need) continue;
         if(-(B.t.x*ux+B.t.y*uy)<need) continue;
         if(A.t.x*B.t.x+A.t.y*B.t.y>-0.25) continue;   /* 真缺口两端切线近似反向平行 */
+        if(outer&&(!outer[A.i]||!outer[B.i])) continue;   /* 外轮廓检测：两端都须在外层墨迹带 */
+        if(!inRegion(A.x,A.y)||!inRegion(B.x,B.y)) continue;   /* 部分检测：两端都须在圈定范围内 */
         let dist=distCache.get(a);
         if(!dist){ dist=geoDist(sk,w,h,A.i,limit); distCache.set(a,dist); }
         const gd=dist[B.i];
@@ -4381,17 +4953,82 @@ function detectGaps(buf,CW,CH,sens){
       used.add(p.a); used.add(p.b);
       const A=eps[p.a], B=eps[p.b];
       const gsize=(p.eu/10)*scale;
+      /* 按线稿本身的局部粗细与颜色推导补线笔刷，避免一处缺口用错笔触 */
+      const lw=localWidthAt(grid,w,h,A.x,A.y);
+      const gwidth=Math.max(2,Math.round((lw||lineW)*scale));
+      const gcolor=inkColorHex(data,CW,CH,(A.x+0.5)*scale,(A.y+0.5)*scale,(B.x+0.5)*scale,(B.y+0.5)*scale);
       gaps.push({
         ax:(A.x+0.5)*scale, ay:(A.y+0.5)*scale,
         bx:(B.x+0.5)*scale, by:(B.y+0.5)*scale,
         ax2:A.x, ay2:A.y, bx2:B.x, by2:B.y, ai:A.i, bi:B.i,
         size:Math.round(gsize),
-        width:Math.max(2,Math.round(lineW)),
+        width:gwidth,
+        color:gcolor,
         sev:gsize<=10?1:gsize<=22?2:3,
         kind:tier.kind,
         comp:A.comp
       });
     }
+  }
+  /* 端点 → 线条侧面：线稿里常见「短线悬空、没接到另一条线的侧面」的缺口，
+     两端点配对逻辑覆盖不到这类情况；沿端点切线方向找最近的另一条线并连上。 */
+  const SIDE_D=26;                 /* 最长补线距离（画布像素） */
+  const sideMax=Math.round(SIDE_D/scale);
+  for(let a=0;a<eps.length;a++){
+    if(used.has(a)) continue;
+    const A=eps[a];
+    if(outer&&!outer[A.i]) continue;
+    if(!inRegion(A.x,A.y)) continue;
+    const ownW=localWidthAt(grid,w,h,A.x,A.y)||lineW;
+    const startS=Math.max(3,Math.round(ownW/2)+2);   /* 跳过自身笔画的墨迹 */
+    let hit=-1, hitS=0;
+    for(let s=startS;s<=sideMax;s++){
+      const x=Math.round(A.x+A.t.x*s), y=Math.round(A.y+A.t.y*s);
+      if(x<1||y<1||x>=w-1||y>=h-1) break;
+      if(grid[y*w+x]){ hit=y*w+x; hitS=s; break; }
+    }
+    if(hit<0) continue;
+    /* 命中点附近取骨架点作为落点：只认别的笔画，命中自身笔画的侧面不算缺口 */
+    const hx0=hit%w, hy0=(hit-hx0)/w;
+    let best=-1, bestD=Infinity;
+    for(let dy=-8;dy<=8;dy++){
+      for(let dx=-8;dx<=8;dx++){
+        const nx=hx0+dx, ny=hy0+dy;
+        if(nx<1||ny<1||nx>=w-1||ny>=h-1) continue;
+        const q=ny*w+nx;
+        if(!sk[q]||lab[q]===A.comp) continue;
+        const dd=dx*dx+dy*dy;
+        if(dd<bestD){ bestD=dd; best=q; }
+      }
+    }
+    if(best<0) continue;                    /* 附近没有别的笔画，不做补线 */
+    const bx0=best%w, by0=(best-bx0)/w;
+    if(outer&&!outer[best]) continue;
+    if(!inRegion(bx0,by0)) continue;
+    const ax=(A.x+0.5)*scale, ay=(A.y+0.5)*scale;
+    const bx=(bx0+0.5)*scale, by=(by0+0.5)*scale;
+    /* 已有缺口覆盖同一落点时不重复记录 */
+    let dup=false;
+    for(let n=0;n<gaps.length&&!dup;n++){
+      if(Math.hypot(gaps[n].ax-ax,gaps[n].ay-ay)<10) dup=true;
+      else if(Math.hypot(gaps[n].bx-ax,gaps[n].by-ay)<10) dup=true;
+      else if(Math.hypot(gaps[n].bx-bx,gaps[n].by-by)<10) dup=true;
+    }
+    if(dup) continue;
+    used.add(a);
+    const gsize=Math.hypot(bx-ax,by-ay);
+    const lw=localWidthAt(grid,w,h,A.x,A.y);
+    gaps.push({
+      ax:ax, ay:ay, bx:bx, by:by,
+      ax2:A.x, ay2:A.y, bx2:bx0, by2:by0, ai:A.i, bi:best,
+      size:Math.round(gsize||hitS*scale),
+      width:Math.max(2,Math.round((lw||lineW)*scale)),
+      color:inkColorHex(data,CW,CH,ax,ay,bx,by),
+      sev:gsize<=10?1:gsize<=22?2:3,
+      kind:"接触",
+      straight:1,            /* 落点在另一条线的侧面，闭合时走直线更贴合 */
+      comp:A.comp
+    });
   }
   gaps.sort(function(x,y){return x.ay-y.ay||x.ax-y.ax;});
   const before=gaps.length;
@@ -4440,12 +5077,16 @@ function floodFillMask(data,w,h,sx,sy,tol){
 onmessage=function(e){
   const m=e.data;
   if(m.type==="scan"){
-    const r=detectGaps(m.buf,m.CW,m.CH,m.sens);
+    const reg=m.reg?new Uint8Array(m.reg):null;
+    const r=detectGaps(m.buf,m.CW,m.CH,m.sens,m.mode,reg);
     const out={type:"scan",seq:m.seq,gaps:r.gaps,sk:r.sk,w:r.w,h:r.h,scale:r.scale,empty:r.empty,tip:r.tip};
     if(r.sk) postMessage(out,[r.sk]); else postMessage(out);
   }else if(m.type==="wand"){
     const r=floodFillMask(new Uint8ClampedArray(m.buf),m.w,m.h,m.x,m.y,m.tol);
     postMessage({type:"wand",seq:m.seq,mask:r.mask.buffer,bounds:r.bounds,count:r.count,aborted:r.aborted,seedX:m.x,seedY:m.y},[r.mask.buffer]);
+  }else if(m.type==="region"){
+    const r=refineRegion(new Uint8ClampedArray(m.buf),m.w,m.h,new Uint8Array(m.base),0);
+    postMessage({type:"region",seq:m.seq,op:m.op,mask:r.mask.buffer,bounds:r.bounds,count:r.count,leak:r.leak},[r.mask.buffer]);
   }
 };`;
 
@@ -4457,7 +5098,7 @@ onmessage=function(e){
     } catch (err) { scanWorker = null; workerDead = true; }
 
     function scanLib() {   /* Worker 不可用时的主线程兜底 */
-      if (!scanLibMain) scanLibMain = new Function(SCAN_LIB + ";return {detectGaps:detectGaps,floodFillMask:floodFillMask};")();
+      if (!scanLibMain) scanLibMain = new Function(SCAN_LIB + ";return {detectGaps:detectGaps,floodFillMask:floodFillMask,skelTangent:skelTangent,refineRegion:refineRegion};")();
       return scanLibMain;
     }
 
@@ -4471,6 +5112,9 @@ onmessage=function(e){
         activeGap = null;
         gapSk = m.sk ? new Uint8Array(m.sk) : null;   /* 骨架供曲线闭合取切线方向 */
         gapW = m.w; gapH = m.h; gapScale = m.scale;
+        annotateRepairs();   /* 标注反复出现（已修复 ≥3 次）的顽固缺口 */
+        const stuck = gaps.find(g => (g.repairs || 0) >= 3);
+        if (stuck) notifyStuckGap(stuck);   /* 重复 3 次仍出现：弹框提示改为手动修复 */
         octx.clearRect(0, 0, CW, CH);
         if (m.empty) {
           gapList.innerHTML = `<div class="empty-note">画布几乎是空的，先画几笔或载入示例线稿再扫描。</div>`;
@@ -4482,60 +5126,395 @@ onmessage=function(e){
       } else if (m.type === "wand") {
         if (m.seq !== wandSeq) return;
         handleWandMask(new Uint8Array(m.mask), m.bounds, m.count, m.aborted, m.seedX, m.seedY);
+      } else if (m.type === "region") {
+        if (m.seq !== regionSeq) return;
+        handleRegionMask(new Uint8Array(m.mask), m.bounds, m.count, m.leak, m.op);
       }
     }
 
     function scanGaps() {
+      if (scanMode === "partial" && !regionMask) {
+        toast("部分检测：请先在画布上圈出要检测的范围");
+        tipGap.textContent = "部分检测：尚未圈定范围";
+        return;
+      }
       let img;
-      try { img = dctx.getImageData(0, 0, CW, CH); }
-      catch (err) { toast("画布已被外部图片污染，无法读取像素用于缺口检测"); return; }
+      try { compositeCanvas(false); img = compCtx.getImageData(0, 0, CW, CH); }
+      catch (err) { toast("画布像素读取失败，无法进行缺口检测"); return; }
       lastData = img.data;
 
       const seq = ++scanSeq;
       tipGap.textContent = "缺口检测：后台扫描中…";
       const buf = img.data.buffer.slice(0);   /* 拷贝一份供 transfer，lastData 保持可用 */
+      /* 部分检测：把泛洪范围再拷一份随消息传入，主线程保留原 mask 用于虚线框绘制 */
+      const regCopy = (scanMode === "partial" && regionMask) ? regionMask.slice() : null;
       if (scanWorker && !workerDead) {
-        scanWorker.postMessage({ type: "scan", seq, buf, CW, CH, sens: sensMinGap }, [buf]);
+        const msg = { type: "scan", seq, buf, CW, CH, sens: sensMinGap, mode: scanMode };
+        const transfer = [buf];
+        if (regCopy) { msg.reg = regCopy.buffer; transfer.push(regCopy.buffer); }
+        scanWorker.postMessage(msg, transfer);
       } else {
-        const r = scanLib().detectGaps(buf, CW, CH, sensMinGap);
+        const r = scanLib().detectGaps(buf, CW, CH, sensMinGap, scanMode, regCopy);
         onScanMessage({ data: { type: "scan", seq, gaps: r.gaps, sk: r.sk, w: r.w, h: r.h, scale: r.scale, empty: r.empty, tip: r.tip } });
       }
     }
 
+    /* ---------- 部分检测：灰色蒙层 → 自由圈选 → 泛洪细化 → 黑色流动虚线 → 加/减范围 → 手动检测 ---------- */
+    /* 切换检测模式：外轮廓只保留最外层墨迹上的缺口；部分检测只在圈定范围内检测 */
+    function setScanMode(mode) {
+      scanMode = mode;
+      panelDraw.querySelectorAll("[data-scan-mode]").forEach(b =>
+        b.classList.toggle("on", b.dataset.scanMode === mode));
+      $id("regionBox").style.display = mode === "partial" ? "block" : "none";
+      if (mode === "outer") {
+        regionArmed = false;
+        lassoPts = null;
+        stopRegionAnim();
+        invalidateGaps("已切换到外轮廓检测，点击「开始扫描」检测最外层轮廓的缺口。");
+      } else {
+        regionArmed = !regionMask;
+        regionOp = "base";
+        refreshGray();
+        updateRegionUI();
+        if (regionEdge) startRegionAnim(); else stopRegionAnim();
+        invalidateGaps(regionMask
+          ? "部分检测：范围已圈定，点击「检测缺口」检测线稿缺口。"
+          : "部分检测：画布已覆上灰色蒙层，按住鼠标自由圈出要检测的范围。");
+      }
+      drawOverlayGaps();
+    }
+
+    /* 范围面板状态同步 */
+    function updateRegionUI() {
+      const has = !!regionMask;
+      $id("regionApply").style.display = has ? "inline-flex" : "none";
+      $id("regionAdd").style.display = has ? "inline-flex" : "none";
+      $id("regionSub").style.display = has ? "inline-flex" : "none";
+      $id("regionClear").style.display = has ? "inline-flex" : "none";
+      $id("regionExpandWrap").style.display = has ? "flex" : "none";
+      $id("regionPick").textContent = has ? "重新圈选" : "圈选范围";
+      let hint;
+      if (!has) {
+        hint = "画布已覆上一层半透明灰色。按住鼠标自由圈出要检测的范围，圈内灰色会随即去除，系统再自动识别具体范围并用黑色流动虚线标出。";
+      } else {
+        hint = "黑色流动虚线是系统识别出的检测范围，未圈选处保持灰色。「加范围」「减范围」可继续圈选并入或剔除，确认后点击「检测缺口」。";
+        if (regionBounds) {
+          const w = regionBounds.maxX - regionBounds.minX + 1;
+          const h = regionBounds.maxY - regionBounds.minY + 1;
+          hint += " 当前范围约 " + w + "×" + h + "px。";
+        }
+      }
+      $id("regionHint").textContent = hint;
+    }
+
+    /* 进入圈选待命：op=base 重新圈定 / add 并入 / sub 剔除 */
+    function armRegionPick(op) {
+      if (scanMode !== "partial") return;
+      regionOp = op || "base";
+      regionArmed = true;
+      lassoPts = null;
+      const word = regionOp === "add" ? "加范围：在画布上圈出要并入检测的区域"
+        : regionOp === "sub" ? "减范围：在画布上圈出要剔除的区域"
+          : "在画布上按住拖拽，自由圈出要检测的范围";
+      tipGap.textContent = "部分检测：" + word;
+      drawOverlayGaps();
+    }
+
+    /* 自由圈选结束：先把轨迹栅格化成掩码，再交给 Worker 做泛洪细化 */
+    function finishLasso(pts) {
+      let minX = CW, maxX = -1, minY = CH, maxY = -1;
+      pts.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+      refreshGray();
+      if (pts.length < 4 || maxX - minX < 8 || maxY - minY < 8) {
+        drawOverlayGaps();
+        toast("圈选范围太小，请重新圈出更大的范围");
+        return;
+      }
+      requestRegion(rasterizePolygon(pts), regionOp);
+    }
+
+    /* 把自由圈选的轨迹按奇偶规则栅格化成画布尺寸的掩码 */
+    function rasterizePolygon(pts) {
+      const mask = new Uint8Array(CW * CH);
+      const n = pts.length;
+      const xs = [];
+      for (let y = 0; y < CH; y++) {
+        xs.length = 0;
+        const sy = y + 0.5;
+        for (let i = 0; i < n; i++) {
+          const a = pts[i], b = pts[(i + 1) % n];
+          if ((a.y <= sy && b.y > sy) || (b.y <= sy && a.y > sy)) {
+            xs.push(a.x + (sy - a.y) / (b.y - a.y) * (b.x - a.x));
+          }
+        }
+        if (!xs.length) continue;
+        xs.sort((p, q) => p - q);
+        for (let k = 0; k + 1 < xs.length; k += 2) {
+          const x0 = Math.max(0, Math.ceil(xs[k] - 0.5));
+          const x1 = Math.min(CW - 1, Math.floor(xs[k + 1] - 0.5));
+          for (let x = x0; x <= x1; x++) mask[y * CW + x] = 1;
+        }
+      }
+      return mask;
+    }
+
+    /* 把圈选掩码交给 Worker（或主线程兜底）做泛洪细化 */
+    function requestRegion(base, op) {
+      let img;
+      try { compositeCanvas(false); img = compCtx.getImageData(0, 0, CW, CH); }
+      catch (err) { toast("画布像素读取失败，无法识别圈选范围"); return; }
+      const buf = img.data.buffer.slice(0);
+      const seq = ++regionSeq;
+      tipGap.textContent = "部分检测：正在识别圈选范围…";
+      if (scanWorker && !workerDead) {
+        const baseCopy = base.slice();
+        scanWorker.postMessage({ type: "region", seq, buf, w: CW, h: CH, base: baseCopy.buffer, op },
+          [buf, baseCopy.buffer]);
+      } else {
+        const r = scanLib().refineRegion(new Uint8ClampedArray(buf), CW, CH, base, 0);
+        handleRegionMask(r.mask, r.bounds, r.count, r.leak, op);
+      }
+    }
+
+    /* 范围细化完成：按 op 并入/剔除，重算边界与灰层，等待用户手动点「检测缺口」 */
+    function handleRegionMask(mask, bounds, count, leak, op) {
+      op = op || "base";
+      if (op === "base") {
+        regionMaskRaw = mask;
+      } else {
+        if (!regionMaskRaw) regionMaskRaw = new Uint8Array(CW * CH);
+        for (let i = 0, n = CW * CH; i < n; i++) {
+          if (op === "add") { if (mask[i]) regionMaskRaw[i] = 1; }
+          else if (mask[i]) regionMaskRaw[i] = 0;
+        }
+      }
+      regionArmed = false;
+      lassoPts = null;
+      applyRegionRaw();
+      if (leak) toast("圈选区域内线条有开口，已按圈选形状识别范围");
+      if (!regionMask) {
+        tipGap.textContent = "部分检测：范围内没有可检测内容，请重新圈选";
+      } else {
+        tipGap.textContent = "部分检测：范围已" + (op === "add" ? "扩大" : op === "sub" ? "缩小" : "确定") +
+          "（" + regionCount + " 像素），确认后点击「检测缺口」。";
+      }
+    }
+
+    /* 依据未微调的掩码重算最终范围：边界微调 → 边界点 → 灰层 → 流动虚线动画 */
+    function applyRegionRaw() {
+      if (!regionMaskRaw) {
+        regionMask = null; regionEdge = null; regionBounds = null; regionCount = 0;
+      } else {
+        regionMask = adjustMask(regionMaskRaw, regionExpand);
+        regionCount = 0;
+        let minX = CW, maxX = -1, minY = CH, maxY = -1;
+        for (let y = 0; y < CH; y++) {
+          for (let x = 0; x < CW; x++) {
+            if (!regionMask[y * CW + x]) continue;
+            regionCount++;
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+          }
+        }
+        if (!regionCount) {
+          regionMask = null; regionEdge = null; regionBounds = null;
+        } else {
+          regionBounds = { minX, maxX, minY, maxY };
+          regionEdge = buildRegionEdge(regionMask);
+        }
+      }
+      refreshGray();
+      updateRegionUI();
+      if (regionEdge) startRegionAnim(); else stopRegionAnim();
+      drawOverlayGaps();
+    }
+
+    /* 边界微调：正数向外膨胀，负数向内腐蚀 */
+    function adjustMask(mask, expand) {
+      const it = Math.min(16, Math.abs(Math.round(expand || 0)));
+      let cur = mask.slice();
+      for (let n = 0; n < it; n++) {
+        const next = new Uint8Array(CW * CH);
+        const grow = expand > 0;
+        for (let y = 1; y < CH - 1; y++) {
+          const row = y * CW;
+          for (let x = 1; x < CW - 1; x++) {
+            const p = row + x;
+            if (grow) {
+              if (cur[p]) next[p] = 1;
+              else if (cur[p - 1] || cur[p + 1] || cur[p - CW] || cur[p + CW]) next[p] = 1;
+            } else if (cur[p] && cur[p - 1] && cur[p + 1] && cur[p - CW] && cur[p + CW]) next[p] = 1;
+          }
+        }
+        cur = next;
+      }
+      return cur;
+    }
+
+    /* 半透明灰色蒙层：未圈选处覆盖，检测范围与正在圈选的轨迹内透出画布 */
+    function refreshGray() {
+      grayCtx.globalCompositeOperation = "source-over";
+      grayCtx.clearRect(0, 0, CW, CH);
+      grayCtx.fillStyle = "rgba(128,128,134,.55)";
+      grayCtx.fillRect(0, 0, CW, CH);
+      grayCtx.globalCompositeOperation = "destination-out";
+      if (regionMask) {
+        if (!holeImg) holeImg = holeCtx.createImageData(CW, CH);
+        const d = holeImg.data;
+        for (let i = 0, n = CW * CH; i < n; i++) d[i * 4 + 3] = regionMask[i] ? 255 : 0;
+        holeCtx.putImageData(holeImg, 0, 0);
+        grayCtx.drawImage(holeCanvas, 0, 0);
+      }
+      if (lassoPts && lassoPts.length > 1) {
+        grayCtx.beginPath();
+        grayCtx.moveTo(lassoPts[0].x, lassoPts[0].y);
+        for (let i = 1; i < lassoPts.length; i++) grayCtx.lineTo(lassoPts[i].x, lassoPts[i].y);
+        grayCtx.closePath();
+        grayCtx.fill();
+      }
+      grayCtx.globalCompositeOperation = "source-over";
+      if (lassoPts && lassoPts.length > 1) {   /* 圈选轨迹本身描一条细线，便于看清圈到哪 */
+        grayCtx.strokeStyle = "rgba(0,0,0,.55)";
+        grayCtx.lineWidth = 2;
+        grayCtx.beginPath();
+        grayCtx.moveTo(lassoPts[0].x, lassoPts[0].y);
+        for (let i = 1; i < lassoPts.length; i++) grayCtx.lineTo(lassoPts[i].x, lassoPts[i].y);
+        grayCtx.stroke();
+      }
+      grayReady = true;
+    }
+
+    /* 黑色流动虚线：按屏幕坐标推进相位形成流动效果 */
+    function startRegionAnim() {
+      if (regionAnimId) return;
+      let last = 0;
+      const loop = t => {
+        if (scanMode !== "partial" || !regionEdge) { regionAnimId = null; return; }
+        if (t - last > 90) {
+          regionPhase = (regionPhase + 1) % 12;
+          drawOverlayGaps();
+          last = t;
+        }
+        regionAnimId = requestAnimationFrame(loop);
+      };
+      regionAnimId = requestAnimationFrame(loop);
+    }
+
+    function stopRegionAnim() {
+      if (regionAnimId) cancelAnimationFrame(regionAnimId);
+      regionAnimId = null;
+    }
+
+    /* 提取范围边界像素，供黑色流动虚线绘制 */
+    function buildRegionEdge(mask) {
+      const edge = [];
+      for (let y = 1; y < CH - 1; y++) {
+        const base = y * CW;
+        for (let x = 1; x < CW - 1; x++) {
+          const p = base + x;
+          if (!mask[p]) continue;
+          if (!mask[p - 1] || !mask[p + 1] || !mask[p - CW] || !mask[p + CW]) edge.push(p);
+        }
+      }
+      return edge;
+    }
+
+    function clearRegion() {
+      regionMask = null;
+      regionMaskRaw = null;
+      regionEdge = null;
+      regionBounds = null;
+      regionCount = 0;
+      regionArmed = scanMode === "partial";
+      regionOp = "base";
+      lassoPts = null;
+      stopRegionAnim();
+      refreshGray();
+      updateRegionUI();
+      invalidateGaps("已清除检测范围。重新圈选后再检测缺口。");
+      drawOverlayGaps();
+    }
+
     const SEV = { 1: ["轻微", "s1"], 2: ["中等", "s2"], 3: ["明显", "s3"] };
+
+    /* ---------- 顽固缺口统计：同一位置被自动修复 ≥3 次即提示手动补线 ---------- */
+    function repairEntry(g) {
+      const mx = (g.ax + g.bx) / 2, my = (g.ay + g.by) / 2;
+      for (let i = 0; i < repairLog.length; i++) {
+        const r = repairLog[i];
+        if (Math.hypot(r.x - mx, r.y - my) < 18 && Math.abs(r.size - g.size) < 14) return r;
+      }
+      return null;
+    }
+
+    /* 扫描完成后回填计数，供列表项展示与关闭拦截 */
+    function annotateRepairs() {
+      gaps.forEach(g => {
+        const r = repairEntry(g);
+        g.repairs = r ? r.count : 0;
+      });
+    }
+
+    function registerRepair(g) {
+      const mx = (g.ax + g.bx) / 2, my = (g.ay + g.by) / 2;
+      const r = repairEntry(g);
+      if (r) { r.count++; r.size = g.size; r.x = mx; r.y = my; }
+      else repairLog.push({ x: mx, y: my, size: g.size, count: 1 });
+    }
+
+    /* 撤回闭合时同步回退计数，避免误判顽固 */
+    function cancelRepair(g) {
+      const r = repairEntry(g);
+      if (!r) return;
+      r.count--;
+      if (r.count <= 0) repairLog.splice(repairLog.indexOf(r), 1);
+    }
 
     function renderGapList() {
       if (!gaps.length) {
         gapList.innerHTML = `<div class="empty-note">扫描完成，未发现未闭合的线稿断点。线条看起来是完整闭合的。</div>`;
         return;
       }
-      gapList.innerHTML = `<div class="empty-note" style="margin-bottom:10px">共 ${gaps.length} 处缺口，画面复杂默认不标明，点击任一项在画布上红色标明。</div>` + gaps.map((g, i) => {
+      const modeNote = scanMode === "partial" ? "部分检测（已圈定范围）" : "外轮廓检测";
+      gapList.innerHTML = `<div class="empty-note" style="margin-bottom:10px">${modeNote}：共 ${gaps.length} 处缺口，画面复杂默认不标明，点击任一项在画布上红色标明。</div>` + gaps.map((g, i) => {
         const [txt, cls] = SEV[g.sev];
+        const stuck = g.repairs >= 3;
+        const gcolor = g.color || sampleColor(g.ax, g.ay);
+        const stuckNote = stuck
+          ? `<div class="gd" style="color:#e0a0a0">该缺口已自动修复 ${g.repairs} 次仍反复出现，建议点「在画布上定位」后改用下方匹配笔刷手动补线。</div>`
+          : "";
         return `
-    <div class="gap-item ${i === activeGap ? "on" : ""}" data-gap="${i}">
+    <div class="gap-item ${i === activeGap ? "on" : ""} ${stuck ? "stuck" : ""}" data-gap="${i}">
       <div class="gt">
         <span class="sev ${cls}">${txt}</span>
         <span>${g.kind} #${i + 1}</span>
         <span class="gm">间距 ${g.size}px</span>
       </div>
       <div class="gd">
-        位置 (${Math.round(g.ax)}, ${Math.round(g.ay)}) → (${Math.round(g.bx)}, ${Math.round(g.by)})，
-        两端点接近但线条未连上，建议补线或直接闭合。
+        ${g.kind === "接触"
+          ? `短线端点 (${Math.round(g.ax)}, ${Math.round(g.ay)}) 与另一条线的侧面 (${Math.round(g.bx)}, ${Math.round(g.by)}) 之间未接上。`
+          : `位置 (${Math.round(g.ax)}, ${Math.round(g.ay)}) → (${Math.round(g.bx)}, ${Math.round(g.by)})，两端点接近但线条未连上。`}
       </div>
+      <div class="gd">
+        匹配笔刷：<span class="sw-dot" style="background:${gcolor}"></span>${gcolor} · ${g.width}px
+      </div>
+      ${stuckNote}
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn sm" data-close-gap="${i}">闭合此处</button>
+        <button class="btn sm" data-close-gap="${i}">${stuck ? "尝试再次闭合" : "闭合此处"}</button>
         <button class="btn ghost sm" data-locate-gap="${i}">在画布上定位</button>
       </div>
     </div>`;
       }).join("");
     }
 
-    function drawOverlayGaps() {
-      octx.clearRect(0, 0, CW, CH);
-      /* 复杂画面默认不标明任何缺口，仅点击列表项后才用红色高亮所选缺口 */
-      if (activeGap === null || !gaps[activeGap]) return;
-      const i = activeGap, g = gaps[i];
-      octx.save();
+    /* ---------- 缺口叠加层绘制（拆成：连线 / 端点圆 / 标签 三个小函数） ---------- */
+    /* 红色虚线连接缺口两端 */
+    function drawGapLine(g) {
       octx.strokeStyle = "rgba(224,82,82,.95)";
       octx.lineWidth = 3;
       octx.setLineDash([7, 6]);
@@ -4544,7 +5523,10 @@ onmessage=function(e){
       octx.lineTo(g.bx, g.by);
       octx.stroke();
       octx.setLineDash([]);
+    }
 
+    /* 缺口两端的圆环标记 */
+    function drawGapEndpoints(g) {
       [[g.ax, g.ay], [g.bx, g.by]].forEach(([x, y]) => {
         octx.beginPath();
         octx.arc(x, y, 14, 0, Math.PI * 2);
@@ -4556,9 +5538,12 @@ onmessage=function(e){
         octx.fillStyle = "#e05252";
         octx.fill();
       });
+    }
 
+    /* 缺口编号与间距标签 */
+    function drawGapLabel(g, index) {
       const mx = (g.ax + g.bx) / 2, my = (g.ay + g.by) / 2;
-      const label = "缺口 #" + (i + 1) + " · " + g.size + "px";
+      const label = "缺口 #" + (index + 1) + " · " + g.size + "px";
       octx.font = "600 13px system-ui, -apple-system, sans-serif";
       const tw = octx.measureText(label).width;
       octx.fillStyle = "rgba(14,13,16,.86)";
@@ -4573,6 +5558,34 @@ onmessage=function(e){
       octx.textAlign = "left";
       octx.textBaseline = "middle";
       octx.fillText(label, bx + 9, by + 12);
+    }
+
+    /* 部分检测：半透明灰色蒙层（圈选范围内透出画布） + 黑色流动虚线范围 */
+    function drawRegionOverlay() {
+      if (scanMode !== "partial") return;
+      if (grayReady) octx.drawImage(grayCanvas, 0, 0);
+      if (!regionEdge || !regionEdge.length) return;
+      octx.save();
+      octx.fillStyle = "#0b0b0e";
+      const ph = regionPhase;
+      for (let i = 0; i < regionEdge.length; i++) {
+        const p = regionEdge[i];
+        const x = p % CW, y = (p - x) / CW;
+        if ((x + y + ph) % 12 < 6) octx.fillRect(x, y, 1, 1);
+      }
+      octx.restore();
+    }
+
+    function drawOverlayGaps() {
+      octx.clearRect(0, 0, CW, CH);
+      drawRegionOverlay();   /* 部分检测的灰色蒙层与流动虚线常驻显示 */
+      /* 复杂画面默认不标明任何缺口，仅点击列表项后才用红色高亮所选缺口 */
+      if (activeGap === null || !gaps[activeGap]) return;
+      const g = gaps[activeGap];
+      octx.save();
+      drawGapLine(g);
+      drawGapEndpoints(g);
+      drawGapLabel(g, activeGap);
       octx.restore();
     }
 
@@ -4588,188 +5601,231 @@ onmessage=function(e){
       return -1;
     }
 
+    /* 在画布上定位缺口，同时套用识别出的线稿笔刷，方便直接手动补线 */
     function selectGap(i) {
       if (i < 0 || i >= gaps.length) return;
       activeGap = i;
       renderGapList();
       drawOverlayGaps();
       const g = gaps[i];
-      tipGap.textContent = "已在画布上用红色标明 " + g.kind + " #" + (i + 1) + "：两端相距 " + g.size + "px，点击「闭合此处」或直接补线";
+      const b = applyGapBrush(g);
+      let msg = "已用红色标明 " + g.kind + " #" + (i + 1) + "：两端相距 " + g.size + "px，已套用匹配笔刷 " + b.col + " / " + b.size + "px";
+      if (g.repairs >= 3) msg += "。该缺口已反复出现 " + g.repairs + " 次，建议手动补线";
+      tipGap.textContent = msg;
+    }
+
+    /* 把缺口处的线稿颜色与粗细直接套到画笔上（定位 / 顽固缺口共用） */
+    function applyGapBrush(g) {
+      const col = g.color || sampleColor(g.ax, g.ay);
+      brush.color = col;
+      brush.size = Math.max(2, Math.round(g.width || 4));
+      brush.opacity = 100;
+      $id("brushColor").value = col;
+      $id("brushSize").value = brush.size;
+      renderSwatches();
+      setTool("pen");
+      updateTip();
+      return { col: col, size: brush.size };
     }
 
     function sampleColor(x, y) {
       if (!lastData) return brush.color;
+      const hx = v => ("0" + Math.round(v).toString(16)).slice(-2);
       for (let rad = 0; rad <= 10; rad += 2) {
         for (let dy = -rad; dy <= rad; dy++) {
           for (let dx = -rad; dx <= rad; dx++) {
             const px = Math.round(x + dx), py = Math.round(y + dy);
             if (px < 0 || py < 0 || px >= CW || py >= CH) continue;
             const k = (py * CW + px) * 4;
-            if (lastData[k + 3] > 60) return "rgb(" + lastData[k] + "," + lastData[k + 1] + "," + lastData[k + 2] + ")";
+            if (lastData[k + 3] > 60) return "#" + hx(lastData[k]) + hx(lastData[k + 1]) + hx(lastData[k + 2]);
           }
         }
       }
       return brush.color;
     }
 
-    /* 沿骨架从端点往回走 steps 步，返回该方向（指向线条内部，单位向量，按全分辨率缩放） */
-    function skelTangent(sk, w, h, startIdx, steps) {
-      let prev = -1, cur = startIdx;
-      let farX = 0, farY = 0;
-      const sx = startIdx % w, sy = (startIdx - sx) / w;
-      for (let s = 0; s < steps; s++) {
-        const cx = cur % w, cy = (cur - cx) / w;
-        farX = cx; farY = cy;
-        const nbs = nbList(sk, w, h, cx, cy);
-        if (nbs.length === 0) break;
-        let next = nbs[0];
-        if (nbs.length > 1) {
-          /* 取最沿原方向前进的邻居 */
-          let best = -1, bd = -Infinity;
-          const dx = cx - (prev === -1 ? cx : (prev % w));
-          const dy = cy - (prev === -1 ? cy : ((prev - (prev % w)) / w));
-          for (const n of nbs) {
-            if (n === prev) continue;
-            const nx = n % w, ny = (n - nx) / w;
-            const dot = (nx - cx) * dx + (ny - cy) * dy;
-            if (dot > bd) { bd = dot; best = n; }
-          }
-          next = best;
-        }
-        if (next === prev || next === cur) break;
-        prev = cur; cur = next;
-      }
-      const vx = sx - farX, vy = sy - farY;
-      const len = Math.hypot(vx, vy) || 1;
-      return { x: vx / len, y: vy / len };
+    /* 取色吸管：读取点击处合成分的像素颜色并设为当前画笔色，可纠正系统匹配的颜色 */
+    function pickColor(p) {
+      const px = Math.max(0, Math.min(CW - 1, Math.round(p.x)));
+      const py = Math.max(0, Math.min(CH - 1, Math.round(p.y)));
+      let d = null;
+      try { compositeCanvas(false); d = compCtx.getImageData(px, py, 1, 1).data; }
+      catch (err) { toast("画布像素读取失败，无法取色"); return; }
+      if (!d || d[3] < 8) { toast("该处是透明区域，没有可吸取的颜色"); return; }
+      const hx = v => ("0" + v.toString(16)).slice(-2);
+      const hex = "#" + hx(d[0]) + hx(d[1]) + hx(d[2]);
+      setColor(hex);
+      tipGap.textContent = "取色吸管：已吸取 " + hex + "，画笔颜色已更新";
+      toast("已吸取颜色 " + hex);
     }
 
-    /* 用三次贝塞尔曲线闭合缺口，方向取自两端骨架切线 */
+    /* 计算闭合曲线的两个控制点：沿两端骨架切线外推，长度取缺口尺寸的 0.45 倍。
+       骨架缺失、缺口过小或控制点偏移过大（会产生 S 形过冲）时返回 null，调用方回退为直线。
+       说明：切线计算复用 SCAN_LIB 中的实现，避免主线程再维护一份重复算法。 */
+    function buildCloseCurve(g) {
+      if (!gapSk || g.size < 4) return null;
+      if (g.straight || g.ai == null || g.bi == null || g.ai < 0 || g.bi < 0) return null;
+      const lib = scanLib();
+      const ta = lib.skelTangent(gapSk, gapW, gapH, g.ai, 8);
+      const tb = lib.skelTangent(gapSk, gapW, gapH, g.bi, 8);
+      const k = g.size * 0.45;
+      const c1x = g.ax + ta.x * k, c1y = g.ay + ta.y * k;
+      const c2x = g.bx + tb.x * k, c2y = g.by + tb.y * k;
+      const mx = (g.ax + g.bx) / 2, my = (g.ay + g.by) / 2;
+      if (Math.hypot(c1x - mx, c1y - my) >= g.size * 1.2) return null;
+      if (Math.hypot(c2x - mx, c2y - my) >= g.size * 1.2) return null;
+      return { c1x, c1y, c2x, c2y };
+    }
+
+    /* 闭合单处缺口：线条颜色与粗细取自线稿本身的局部统计；能算曲线就走贝塞尔 */
     function drawClose(g) {
-      const col = sampleColor(g.ax, g.ay);
-      const lineW = Math.max(2, g.width);
       dctx.save();
       dctx.globalCompositeOperation = "source-over";
       dctx.globalAlpha = 1;
-      dctx.strokeStyle = col;
-      dctx.lineWidth = lineW;
+      dctx.strokeStyle = g.color || sampleColor(g.ax, g.ay);
+      dctx.lineWidth = Math.max(2, g.width || 4);
       dctx.lineCap = "round";
       dctx.lineJoin = "round";
 
-      let useCurve = false;
-      if (gapSk && g.size >= 4) {
-        const ta = skelTangent(gapSk, gapW, gapH, g.ai, 8);
-        const tb = skelTangent(gapSk, gapW, gapH, g.bi, 8);
-        const len = g.size;
-        /* 控制点：沿各自切线方向、距离为缺口长度的 0.45 倍 */
-        const k = len * 0.45;
-        const c1x = g.ax + ta.x * k, c1y = g.ay + ta.y * k;
-        const c2x = g.bx + tb.x * k, c2y = g.by + tb.y * k;
-        /* 控制合理性：控制点不能拉得离两点连线太远（避免 S 形过冲） */
-        const mx = (g.ax + g.bx) / 2, my = (g.ay + g.by) / 2;
-        const c1dist = Math.hypot(c1x - mx, c1y - my);
-        const c2dist = Math.hypot(c2x - mx, c2y - my);
-        if (c1dist < len * 1.2 && c2dist < len * 1.2) {
-          dctx.beginPath();
-          dctx.moveTo(g.ax, g.ay);
-          dctx.bezierCurveTo(c1x, c1y, c2x, c2y, g.bx, g.by);
-          dctx.stroke();
-          useCurve = true;
-        }
-      }
-
-      if (!useCurve) {
-        /* 回退：直线连接（极小缺口或骨架信息不可用时） */
-        dctx.beginPath();
-        dctx.moveTo(g.ax, g.ay);
-        dctx.lineTo(g.bx, g.by);
-        dctx.stroke();
-      }
+      const curve = buildCloseCurve(g);
+      dctx.beginPath();
+      dctx.moveTo(g.ax, g.ay);
+      if (curve) dctx.bezierCurveTo(curve.c1x, curve.c1y, curve.c2x, curve.c2y, g.bx, g.by);
+      else dctx.lineTo(g.bx, g.by);
+      dctx.stroke();
       dctx.restore();
-      return useCurve;
+      return !!curve;
     }
 
-    /* 大缺口弹框 */
+    /* 顽固缺口弹框：同一缺口被自动修复 ≥3 次仍反复出现，提示改用匹配笔刷手动补线 */
     function showBigGapModal(g) {
       pendingGap = g;
-      const col = sampleColor(g.ax, g.ay);
-      document.getElementById("bigGapSwatch").style.background = col;
-      document.getElementById("bigGapColor").textContent = col;
-      document.getElementById("bigGapWidth").textContent = Math.max(2, g.width);
-      document.getElementById("bigGapDesc").textContent =
-        "该缺口间距 " + g.size + "px，超过建议自动闭合阈值。已识别线稿颜色与粗细，建议切换为画笔沿参考线手动绘制；也可强制用曲线闭合（可能失真）。";
-      document.getElementById("bigGapModal").style.display = "flex";
+      const col = g.color || sampleColor(g.ax, g.ay);
+      $id("bigGapSwatch").style.background = col;
+      $id("bigGapColor").textContent = col;
+      $id("bigGapWidth").textContent = Math.max(2, g.width || 4);
+      $id("bigGapDesc").textContent = "该缺口已被自动修复 " + (g.repairs || 0) +
+        " 次仍反复出现，说明自动补线无法贴合此处线稿。请采用下方匹配笔刷（颜色与粗细），在画布上沿参考线手动补线。";
+      $id("bigGapModal").style.display = "flex";
     }
 
     function hideBigGapModal() {
-      document.getElementById("bigGapModal").style.display = "none";
+      $id("bigGapModal").style.display = "none";
       pendingGap = null;
     }
 
-    /* 记入闭合历史 */
-    function pushClosedHistory(g, curved) {
-      /* 撤回需要的是闭合「前」的画布状态 —— 即 snapshot() 刚压入 undoStack 的那帧 */
-      const before = undoStack.length ? undoStack[undoStack.length - 1] : dctx.getImageData(0, 0, CW, CH);
-      closedHistory.push({
-        gap: { ...g },
+    /* 反复出现 ≥3 次：每次跨过新的修复次数时自动弹框一次，避免每次扫描都打扰 */
+    function notifyStuckGap(g) {
+      const r = repairEntry(g);
+      if (!r || (r.notified || 0) >= r.count) return;
+      r.notified = r.count;
+      showBigGapModal(g);
+      tipGap.textContent = "检测到反复出现 " + g.repairs + " 次的缺口，已弹框提示改为手动修复";
+    }
+
+    const MAX_CLOSE_ACTIONS = 10;    /* 闭合动作最多保留 10 组（每组含整张画布快照） */
+
+    /* 记录一次闭合动作：single=单缺口，all=一键全部；snapshot 是动作发生前的整张画布 */
+    function pushCloseAction(kind, items, before) {
+      closeActions.push({
+        kind: kind,
+        items: items,
         snapshot: before,
-        curved,
         when: nowLabel()
       });
+      if (closeActions.length > MAX_CLOSE_ACTIONS) closeActions.shift();
       renderClosedHistory();
     }
 
+    /* 闭合历史：固定高度框内滚动，逐条标明缺口所在位置 */
     function renderClosedHistory() {
-      const box = document.getElementById("closedHistory");
-      if (!closedHistory.length) {
+      const box = $id("closedHistory");
+      if (!closeActions.length) {
         box.innerHTML = `<div class="empty-note">暂无闭合记录</div>`;
         return;
       }
-      box.innerHTML = closedHistory.map((h, i) => `
+      const rows = [];
+      closeActions.forEach((a, ai) => {
+        a.items.forEach((it, ii) => {
+          const cx = Math.round((it.gap.ax + it.gap.bx) / 2);
+          const cy = Math.round((it.gap.ay + it.gap.by) / 2);
+          const tag = a.kind === "all" ? "一键全部 · " + a.items.length + " 处" : "单次闭合";
+          rows.push(`
     <div class="closed-item">
       <div>
-        <div>${h.gap.kind} #${i + 1} · ${h.curved ? "曲线闭合" : "直线闭合"} · ${h.gap.size}px</div>
-        <div class="cmeta">${h.when}</div>
+        <div>${it.gap.kind} · ${it.gap.size}px · ${it.curved ? "曲线" : "直线"}</div>
+        <div class="cmeta">位置 (${cx}, ${cy}) · ${tag} · ${a.when}</div>
       </div>
-      <button class="btn ghost sm" data-undo-close="${i}">撤回</button>
-    </div>`).join("");
+      <button class="btn ghost sm" data-undo-close="${ai}:${ii}">撤回</button>
+    </div>`);
+        });
+      });
+      box.innerHTML = rows.join("");
     }
 
-    function undoClose(i) {
-      const h = closedHistory[i];
-      if (!h) return;
-      restore(h.snapshot);
-      closedHistory.splice(i);   /* 撤回本条及之后所有闭合（因快照是全画布状态） */
+    /* 单条撤回：恢复该动作之前的快照，并连带回滚它之后的动作（快照是累积的） */
+    function undoClose(key) {
+      const ai = +String(key).split(":")[0];
+      if (!closeActions[ai]) return;
+      const removed = closeActions.splice(ai);
+      restore(removed[0].snapshot);
+      removed.forEach(a => a.items.forEach(it => cancelRepair(it.gap)));
       renderClosedHistory();
-      toast("已撤回该次闭合");
+      toast("已撤回该次闭合及其之后的记录");
       scanGaps();
     }
 
-    const BIG_GAP_LIMIT = 36;   /* 超过此像素的缺口先弹框建议手动绘制 */
+    /* 一键撤回：撤回上次闭合；若上次是一键全部，则整批撤回 */
+    function undoLastClose() {
+      const a = closeActions.pop();
+      if (!a) { toast("没有可撤回的闭合记录"); return; }
+      restore(a.snapshot);
+      a.items.forEach(it => cancelRepair(it.gap));
+      renderClosedHistory();
+      toast(a.kind === "all"
+        ? "已撤回上次一键闭合的全部 " + a.items.length + " 处缺口"
+        : "已撤回上次闭合的缺口");
+      scanGaps();
+    }
 
     function closeGap(g) {
       if (!g) return;
-      if (g.size > BIG_GAP_LIMIT) {
+      /* 已自动修复 ≥3 次仍反复出现：弹框建议手动绘制，并给出匹配笔刷 */
+      if ((g.repairs || 0) >= 3) {
         showBigGapModal(g);
         return;
       }
       snapshot();
+      const before = undoStack[undoStack.length - 1];
       const curved = drawClose(g);
-      pushClosedHistory(g, curved);
+      registerRepair(g);
+      pushCloseAction("single", [{ gap: { ...g }, curved }], before);
       toast("已用" + (curved ? "曲线" : "直线") + "闭合缺口");
       scanGaps();
     }
 
+    /* 一键闭合：跳过已反复出现 ≥3 次的顽固缺口（这些交给用户手动补线），关闭的部分整批可撤回 */
     function closeAllGaps() {
       if (!gaps.length) { toast("当前没有待闭合的缺口，先点击「开始扫描」"); return; }
+      const list = gaps.filter(g => (g.repairs || 0) < 3);
+      const skipped = gaps.length - list.length;
+      if (!list.length) {
+        toast("所有缺口都已反复出现 3 次以上，建议逐个「在画布上定位」后手动补线");
+        return;
+      }
       snapshot();
-      const list = gaps.slice();
+      const before = undoStack[undoStack.length - 1];
+      const items = [];
       let curvedCount = 0;
       list.forEach(g => {
-        if (drawClose(g)) curvedCount++;
-        pushClosedHistory(g, true);
+        const curved = drawClose(g);
+        if (curved) curvedCount++;
+        registerRepair(g);
+        items.push({ gap: { ...g }, curved });
       });
-      toast("已一键闭合 " + list.length + " 处缺口（其中 " + curvedCount + " 处用曲线）");
+      pushCloseAction("all", items, before);
+      toast("已一键闭合 " + items.length + " 处缺口（其中 " + curvedCount + " 处用曲线）" +
+        (skipped ? "；另有 " + skipped + " 处已反复出现 3 次以上，已跳过并建议手动绘制" : ""));
       scanGaps();
     }
 
@@ -4836,7 +5892,7 @@ onmessage=function(e){
     }
 
     function renderRefBody() {
-      const box = document.getElementById("refBody");
+      const box = $id("refBody");
       const r = refOpen ? poseRefs.find(x => x.id === refOpen) : null;
       if (r) {
         box.innerHTML = `
@@ -4870,7 +5926,7 @@ onmessage=function(e){
     }
 
     function doRefSearch() {
-      refQuery = document.getElementById("refInput").value;
+      refQuery = $id("refInput").value;
       refOpen = null;
       renderRefBody();
       const n = refList().length;
@@ -4902,11 +5958,14 @@ onmessage=function(e){
       if (lg) { selectGap(+lg.dataset.locateGap); return; }
       const gi = e.target.closest("[data-gap]");
       if (gi) { selectGap(+gi.dataset.gap); return; }
+      const sm = e.target.closest("[data-scan-mode]");
+      if (sm) { setScanMode(sm.dataset.scanMode); return; }
       const uc = e.target.closest("[data-undo-close]");
-      if (uc) { undoClose(+uc.dataset.undoClose); return; }
+      if (uc) { undoClose(uc.dataset.undoClose); return; }
       const sr = e.target.closest("[data-send-ref]");
       if (sr) { setCanvasRef(sr.dataset.sendRef, sr.dataset.label); return; }
-      if (e.target.id === "importImgBtn") { document.getElementById("importImgInput").click(); return; }
+      if (e.target.id === "importImgBtn") { $id("importImgInput").click(); return; }
+      if (e.target.id === "exportImgBtn") { exportImage(); return; }
       if (e.target.id === "wandFillSel") { wandFill(); return; }
       if (e.target.id === "wandClearSel") { wandClearSelection(); return; }
       const ch = e.target.closest("[data-refchip]");
@@ -4918,15 +5977,18 @@ onmessage=function(e){
       if (fv) { toggleFav(fv.dataset.fav); return; }
       if (e.target.id === "scanGaps") { scanGaps(); return; }
       if (e.target.id === "closeAllGaps") { closeAllGaps(); return; }
+      if (e.target.id === "undoLastClose") { undoLastClose(); return; }
+      if (e.target.id === "regionPick") { armRegionPick("base"); return; }
+      if (e.target.id === "regionAdd") { armRegionPick("add"); return; }
+      if (e.target.id === "regionSub") { armRegionPick("sub"); return; }
+      if (e.target.id === "regionApply") { scanGaps(); return; }
+      if (e.target.id === "regionClear") { clearRegion(); return; }
       if (e.target.id === "loadSample") { loadSample(); return; }
       if (e.target.id === "clearCanvas") { clearCanvas(); return; }
       if (e.target.id === "undoBtn") { undo(); return; }
       if (e.target.id === "redoBtn") { redo(); return; }
       if (e.target.id === "refSearchBtn") { doRefSearch(); return; }
       if (e.target.id === "aiSend") { aiSend(); return; }
-      if (e.target.id === "bigGapUseBrush") { bigGapUseBrush(); return; }
-      if (e.target.id === "bigGapForce") { bigGapForceClose(); return; }
-      if (e.target.id === "bigGapCancel") { hideBigGapModal(); return; }
     });
 
     panelDraw.addEventListener("input", e => {
@@ -4936,7 +5998,12 @@ onmessage=function(e){
       else if (e.target.id === "fillColor") { fillColor = e.target.value; }
       else if (e.target.id === "sensRange") {
         sensMinGap = +e.target.value;
-        document.getElementById("sensVal").textContent = "忽略 ≤ " + sensMinGap + "px";
+        $id("sensVal").textContent = "忽略 ≤ " + sensMinGap + "px";
+      }
+      else if (e.target.id === "regionExpand") {
+        regionExpand = +e.target.value;
+        $id("regionExpandVal").textContent = (regionExpand > 0 ? "+" : "") + regionExpand + "px";
+        if (regionMaskRaw) applyRegionRaw();   /* 直接在主线程重算边界，无需重跑泛洪 */
       }
       else if (e.target.id === "wandTol") {
         wandTolerance = +e.target.value;
@@ -4949,94 +6016,103 @@ onmessage=function(e){
       if (e.target.id === "aiInput" && e.key === "Enter") { e.preventDefault(); aiSend(); }
     });
 
-    /* ---------- 大缺口弹框操作 ---------- */
-    function bigGapUseBrush() {
-      if (!pendingGap) return;
-      const col = sampleColor(pendingGap.ax, pendingGap.ay);
-      brush.color = col;
-      brush.size = Math.max(2, pendingGap.width);
-      brush.tool = "pen";
-      document.getElementById("brushColor").value = col;
-      document.getElementById("brushSize").value = brush.size;
-      renderSwatches();
-      setTool("pen");
-      hideBigGapModal();
-      toast("已采用线稿画笔（" + col + " / " + brush.size + "px），可沿参考线手动绘制");
-    }
-
-    function bigGapForceClose() {
-      if (!pendingGap) return;
-      const g = pendingGap;
-      hideBigGapModal();
-      snapshot();
-      const curved = drawClose(g);
-      pushClosedHistory(g, curved);
-      toast("已强制用" + (curved ? "曲线" : "直线") + "闭合该大缺口");
-      scanGaps();
-    }
-
-    /* ---------- 图片缩放（最长边限制） ---------- */
-    /* 把任意尺寸的图像用 canvas 缩放到最长边 ≤ maxDim，返回 { canvas, width, height } */
-    function downscaleImage(img, maxDim = 800) {
-      const w = img.naturalWidth || img.width;
-      const h = img.naturalHeight || img.height;
-      if (w <= maxDim && h <= maxDim) return { canvas: img, width: w, height: h, scale: 1 };
-      const s = maxDim / Math.max(w, h);
-      const tw = Math.max(1, Math.round(w * s));
-      const th = Math.max(1, Math.round(h * s));
-      const c = document.createElement("canvas");
-      c.width = tw; c.height = th;
-      const cx = c.getContext("2d");
-      /* high-quality 缩放，避免锯齿 */
-      cx.imageSmoothingEnabled = true;
-      cx.imageSmoothingQuality = "high";
-      cx.drawImage(img, 0, 0, tw, th);
-      return { canvas: c, width: tw, height: th, scale: s };
-    }
-
-    /* ---------- 导入外部图片 · 直接作为线稿检测对象 ---------- */
-    document.getElementById("importImgInput").addEventListener("change", e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      readerOnLoad(file);
-      e.target.value = "";
-
-      function readerOnLoad(f) {
-        const reader = new FileReader();
-        reader.onload = ev => {
-          const img = new Image();
-          img.onload = () => {
-            /* 先缩放到最长边 ≤ 800px，防止大图卡死 */
-            const scaled = downscaleImage(img, 800);
-            const origNote = (img.naturalWidth || img.width) + "×" + (img.naturalHeight || img.height);
-            if (scaled.scale < 1) toast("图片已从 " + origNote + " 压缩到 " + scaled.width + "×" + scaled.height + "（≤ 800px）");
-
-            /* 直接清画布 → 把图片等比铺满画进画布 */
-            snapshot();
-            dctx.save();
-            dctx.globalAlpha = 1;
-            dctx.globalCompositeOperation = "source-over";
-            const srcW = scaled.width, srcH = scaled.height;
-            const scale = Math.max(CW / srcW, CH / srcH);
-            const dw = srcW * scale, dh = srcH * scale;
-            dctx.clearRect(0, 0, CW, CH);
-            dctx.drawImage(scaled.canvas, (CW - dw) / 2, (CH - dh) / 2, dw, dh);
-            dctx.restore();
-            /* 隐藏底图（保持干净，不影响检测） */
-            const ul = document.getElementById("drawUnderlay");
-            ul.src = ""; ul.style.display = "none";
-
-            toast("已载入图片，正在扫描线稿缺口…");
-            invalidateGaps();
-            /* 放到下一帧执行，避免主线程同步阻塞造成假死感 */
-            requestAnimationFrame(() => scanGaps());
-          };
-          img.onerror = () => toast("图片加载失败，请换一张");
-          img.src = ev.target.result;
-        };
-        reader.readAsDataURL(f);
+    /* ---------- 快捷键：撤回 / 重做 / 画布放大缩小（输入框、下拉框内不拦截） ---------- */
+    document.addEventListener("keydown", e => {
+      if (!panelDraw.classList.contains("active")) return;
+      const t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const k = (e.key || "").toLowerCase();
+      if (k === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+      } else if (k === "y") {
+        e.preventDefault();
+        redo();
+      } else if (k === "=" || k === "+") {
+        e.preventDefault();
+        setViewZoom(viewZoom * 1.15);
+      } else if (k === "-" || k === "_") {
+        e.preventDefault();
+        setViewZoom(viewZoom / 1.15);
+      } else if (k === "0") {
+        e.preventDefault();
+        setViewZoom(1);
       }
     });
+
+    /* ---------- 顽固缺口弹框操作 ---------- */
+    function bigGapUseBrush() {
+      if (!pendingGap) return;
+      const b = applyGapBrush(pendingGap);
+      hideBigGapModal();
+      toast("已采用线稿匹配画笔（" + b.col + " / " + b.size + "px），可沿参考线手动绘制");
+    }
+
+    /* 弹框位于绘画面板之外，面板上的点击委托捕获不到，这里直接绑定按钮 */
+    $id("bigGapUseBrush").addEventListener("click", bigGapUseBrush);
+    $id("bigGapCancel").addEventListener("click", hideBigGapModal);
+
+    /* ---------- 导入外部图片 · 等比适配到画框 ---------- */
+    /* 适配规则：大图等比缩小到画框内完整可见（不裁切），小图保持原尺寸居中（不放大避免发糊） */
+    $id("importImgInput").addEventListener("change", e => {
+      const file = e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+        if (!nw || !nh) { toast("图片尺寸异常，请换一张"); URL.revokeObjectURL(url); return; }
+        snapshot();                              /* 清掉旧笔迹可撤回 */
+        dctx.clearRect(0, 0, CW, CH);
+        clearImageLayer();
+
+        const fit = Math.min(1, CW / nw, CH / nh);
+        const w = nw * fit, h = nh * fit;
+        imgData = img;
+        imgBox = { x: (CW - w) / 2, y: (CH - h) / 2, w, h };
+        imgReady = true;
+        imgUrl = url;
+        underlayEl.src = url;
+        applyImgView();
+        setTool("move");                         /* 导入后直接可拖动 / 滚轮缩放底图 */
+
+        invalidateGaps();
+        tipGap.textContent = "已导入 " + nw + "×" + nh + (fit < 1
+          ? " · 等比缩小到 " + Math.round(w) + "×" + Math.round(h)
+          : " · 原尺寸居中（未放大）");
+        toast(fit < 1 ? "已导入图片：等比缩小到画框内完整显示" : "已导入图片：原尺寸居中显示（未放大）");
+        /* 放到下一帧执行，避免主线程同步阻塞造成假死感 */
+        requestAnimationFrame(() => scanGaps());
+      };
+      img.onerror = () => { toast("图片加载失败，请换一张"); URL.revokeObjectURL(url); };
+      img.src = url;
+    });
+
+    /* ---------- 导出图片：PNG 透明底 / JPG 白底（底图 + 笔迹合成为一张） ---------- */
+    function exportImage() {
+      const png = $id("exportFmt").value !== "jpg";
+      const cv = document.createElement("canvas");
+      cv.width = CW; cv.height = CH;
+      drawComposite(cv.getContext("2d"), !png);
+      const d = new Date();
+      const p2 = n => (n < 10 ? "0" : "") + n;
+      const name = "集画线稿-" + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + "-" +
+        p2(d.getHours()) + p2(d.getMinutes()) + (png ? ".png" : ".jpg");
+      cv.toBlob(blob => {
+        if (!blob) { toast("导出失败，请重试"); return; }
+        const href = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = href;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(href), 1500);
+        toast("已导出 " + name + "（" + (png ? "透明底" : "白底") + "）");
+      }, png ? "image/png" : "image/jpeg", 0.92);
+    }
 
     /* ---------- 魔棒填色（泛洪算法已迁入 SCAN_LIB，Web Worker 后台执行） ---------- */
     function handleWandMask(mask, bounds, count, aborted, seedX, seedY) {
@@ -5052,8 +6128,8 @@ onmessage=function(e){
       const x = Math.max(0, Math.min(CW - 1, Math.round(p.x)));
       const y = Math.max(0, Math.min(CH - 1, Math.round(p.y)));
       let img;
-      try { img = dctx.getImageData(0, 0, CW, CH); }
-      catch (err) { toast("画布已被外部图片污染，无法读取像素用于魔棒填色"); return; }
+      try { compositeCanvas(false); img = compCtx.getImageData(0, 0, CW, CH); }
+      catch (err) { toast("画布像素读取失败，无法进行魔棒填色"); return; }
       const seq = ++wandSeq;
       tipGap.textContent = "魔棒填色：后台计算选区…";
       const buf = img.data.buffer.slice(0);   /* 拷贝供 transfer */
@@ -5096,7 +6172,7 @@ onmessage=function(e){
     }
 
     function showWandControls() {
-      let bar = document.getElementById("wandCtrlBar");
+      let bar = $id("wandCtrlBar");
       if (!bar) {
         bar = document.createElement("div");
         bar.id = "wandCtrlBar";
@@ -5108,11 +6184,11 @@ onmessage=function(e){
       <button class="btn ghost sm" id="wandClearSel">清除选区</button>`;
         document.querySelector(".canvas-wrap").appendChild(bar);
         bar.addEventListener("input", e => {
-          if (e.target.id === "wandFillColor") { fillColor = e.target.value; document.getElementById("fillColor").value = fillColor; }
+          if (e.target.id === "wandFillColor") { fillColor = e.target.value; $id("fillColor").value = fillColor; }
         });
       }
       bar.style.display = "flex";
-      document.getElementById("wandFillColor").value = fillColor;
+      $id("wandFillColor").value = fillColor;
     }
 
     let wandPhase = 0;
@@ -5139,7 +6215,7 @@ onmessage=function(e){
       wandAnimId = null;
       octx.clearRect(0, 0, CW, CH);
       drawOverlayGaps();
-      const bar = document.getElementById("wandCtrlBar");
+      const bar = $id("wandCtrlBar");
       if (bar) bar.style.display = "none";
       tipGap.textContent = "已清除魔棒选区";
     }
@@ -5167,7 +6243,7 @@ onmessage=function(e){
     }
 
     function initWandDemo() {
-      const c = document.getElementById("wandDemo");
+      const c = $id("wandDemo");
       if (!c) return;
       const x = c.getContext("2d");
       function redraw() {
@@ -5198,19 +6274,18 @@ onmessage=function(e){
 
     /* ---------- 浮动参考图 ---------- */
     function setCanvasRef(url, label) {
-      const box = document.getElementById("refPreview");
-      document.getElementById("refPreviewImg").src = url;
-      document.getElementById("refPreviewLabel").textContent = label || "参考图";
+      const box = $id("refPreview");
+      $id("refPreviewImg").src = url;
+      $id("refPreviewLabel").textContent = label || "参考图";
       box.style.display = "block";
       setSidePane("gaps");
       toast("已发送到绘画面板参考（右上角）");
     }
-    document.getElementById("refPreviewClose").addEventListener("click", () => {
-      document.getElementById("refPreview").style.display = "none";
+    $id("refPreviewClose").addEventListener("click", () => {
+      $id("refPreview").style.display = "none";
     });
 
     /* ---------- AI 动作顾问 ---------- */
-    function mkPose(o) { return o; }
     function stanceAnim() {
       const A = {
         head: [100, 40], neck: [100, 58], chest: [100, 78], pelvis: [100, 118],
@@ -5404,7 +6479,7 @@ onmessage=function(e){
 
     const aiMsgs = [];
     function renderAiMsgs() {
-      const box = document.getElementById("aiMsgs");
+      const box = $id("aiMsgs");
       box.innerHTML = aiMsgs.map(m => {
         if (m.role === "u") return `<div class="ai-msg u">${m.text}</div>`;
         const items = m.analysis ? Object.entries(m.analysis).map(([k, v]) => `<li><b>${k}</b>：${v}</li>`).join("") : "";
@@ -5429,7 +6504,7 @@ onmessage=function(e){
     }
 
     function aiSend() {
-      const input = document.getElementById("aiInput");
+      const input = $id("aiInput");
       const q = input.value.trim();
       if (!q) return;
       aiMsgs.push({ role: "u", text: q });
