@@ -4372,7 +4372,20 @@ onmessage=function(e){
       if (btn) setDreamMode(btn.dataset.dreamMode);
     });
 
-    $id("toAssistDraw").addEventListener("click", () => switchTab("draw"));
+    /* 绘画并入集梦：把原绘画面板移到「辅助绘画」视图内，不再单独设导航入口 */
+    const assistDrawPanel = $id("panel-draw");
+    if (assistDrawPanel) {
+      assistDrawPanel.classList.remove("panel", "active");
+      assistDrawPanel.classList.add("assist-draw");
+      const assistView = $id("dm-assist");
+      const dreamSecHead = assistView.querySelector(".sec-head");
+      assistView.insertBefore(assistDrawPanel, dreamSecHead);
+    }
+
+    $id("toAssistDraw").addEventListener("click", () => {
+      const dp = $id("panel-draw");
+      if (dp) dp.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 
     /* ================= live模式：Live2D 拆件引导（演示） ================= */
     // DEMO: 本模块不加载任何模型、不做图像分割，进度与分层结果全部为前端预设
@@ -5247,6 +5260,262 @@ onmessage=function(e){
       renderHandTimeline();
       setLiveImage(LIVE_CONFIG.presets[0].img, LIVE_CONFIG.presets[0].id, "已选择：" + LIVE_CONFIG.presets[0].name);
       renderLiveLayers();
+    })();
+
+    /* ================= 周边定制：移动端小程序式演示 ================= */
+    // DEMO: 商品、订单、购物车与结算均为前端模拟，不上传图片、不生成真实印刷文件
+    const MP_TEMPLATES = {
+      standee: { name: "亚克力立牌", ratio: "3 / 4", note: "15cm · 双面印刷" },
+      badge: { name: "吧唧徽章", ratio: "1 / 1", note: "58mm · 亮膜" },
+      card: { name: "色纸", ratio: "4 / 5", note: "14×18cm · 珠光" },
+      tote: { name: "帆布包", ratio: "1 / 1.1", note: "加厚 · 大容量" }
+    };
+
+    const MP_PRESETS = [
+      { id: "a1", name: "花朝月夕", img: artworks[0].img },
+      { id: "a2", name: "霓虹雨夜", img: artworks[1].img },
+      { id: "a3", name: "云端之城", img: artworks[2].img }
+    ];
+
+    const MP_GOODS = [
+      {
+        id: "g1", t: "亚克力立牌", sub: "15cm · 双面印刷", p: 68, hot: "热卖", template: "standee",
+        img: goods[1].img
+      },
+      {
+        id: "g2", t: "吧唧徽章", sub: "58mm · 亮膜", p: 25, hot: "新品", template: "badge",
+        img: IMG("round%20button%20badge%20pin%20with%20cute%20anime%20character%20art%2C%20product%20close%20up%20photo", "square_hd")
+      },
+      {
+        id: "g3", t: "色纸", sub: "14×18cm · 珠光", p: 35, hot: "", template: "card",
+        img: IMG("shikishi%20art%20card%20with%20anime%20illustration%20displayed%20on%20a%20wooden%20stand%2C%20product%20photo", "square_hd")
+      },
+      {
+        id: "g4", t: "帆布包", sub: "加厚 · 大容量", p: 89, hot: "", template: "tote",
+        img: goods[2].img
+      },
+      {
+        id: "g5", t: "亚克力钥匙扣", sub: "5 枚入 · 盲盒款", p: 45, hot: "", template: "badge",
+        img: goods[3].img
+      },
+      {
+        id: "g6", t: "明信片套装", sub: "6 张入 · 特种纸", p: 12, hot: "限定", template: "card",
+        img: IMG("set%20of%20art%20postcards%20with%20anime%20illustrations%2C%20fanned%20on%20a%20desk%2C%20product%20photo", "square_hd")
+      }
+    ];
+
+    const mpState = {
+      product: null, template: "standee", img: "", zoom: 1, x: 0, y: 0,
+      cart: [], tab: "discover"
+    };
+
+    function renderMpGoods() {
+      $id("mpGoods").innerHTML = MP_GOODS.map(g => `
+  <button class="mp-good" data-mp-good="${g.id}">
+    <div class="mp-good-img">
+      <img src="${g.img}" alt="${g.t}" loading="lazy" />
+      ${g.hot ? `<span class="mp-good-tag">${g.hot}</span>` : ""}
+    </div>
+    <div class="mp-good-body">
+      <b>${g.t}</b>
+      <em>${g.sub}</em>
+      <span class="mp-price">￥${g.p}<i>起</i></span>
+    </div>
+  </button>`).join("");
+    }
+
+    function applyMpArt() {
+      const el = $id("mpsArt");
+      if (!el) return;
+      el.style.backgroundImage = `url("${mpState.img}")`;
+      el.style.transform = `translate(${mpState.x}px, ${mpState.y}px) scale(${mpState.zoom})`;
+    }
+
+    function renderMpSheet() {
+      const g = mpState.product;
+      if (!g) return;
+      const tpl = MP_TEMPLATES[mpState.template];
+      $id("mpSheet").innerHTML = `
+  <div class="mps-head"><span class="mps-grab"></span><b>${g.t}</b><button class="mps-close" data-mp-close title="关闭">✕</button></div>
+  <p class="mps-sub">${g.sub} · ￥${g.p} 起</p>
+  <div class="mps-preview" id="mpsPreview">
+    <div class="mps-template tpl-${mpState.template}" style="aspect-ratio:${tpl.ratio}">
+      <div class="mps-art" id="mpsArt"></div>
+      <span class="mps-badge">${tpl.name} · 实时预览</span>
+    </div>
+    <span class="demo-tag mps-demo">演示</span>
+  </div>
+  <div class="mps-tpls">
+    ${Object.entries(MP_TEMPLATES).map(([k, v]) =>
+      `<button class="mps-chip ${k === mpState.template ? "on" : ""}" data-mp-tpl="${k}">${v.name}</button>`).join("")}
+  </div>
+  <div class="mps-block">
+    <span class="mps-label">选择图片</span>
+    <div class="mps-art-list">
+      ${MP_PRESETS.map(a => `
+      <button class="mps-art-opt ${mpState.img === a.img ? "on" : ""}" data-mp-art="${a.id}">
+        <img src="${a.img}" alt="${a.name}" /><i>${a.name}</i>
+      </button>`).join("")}
+      <label class="mps-upload">＋<span>上传</span><input type="file" id="mpFile" accept="image/*" hidden /></label>
+    </div>
+  </div>
+  <div class="mps-zoom">
+    <span class="mps-label">缩放</span>
+    <input id="mpZoom" type="range" min="100" max="260" value="${Math.round(mpState.zoom * 100)}" />
+  </div>
+  <p class="mps-note">拖动预览图可调整构图 · 演示版不生成真实印刷文件</p>
+  <div class="mps-actions">
+    <button class="mp-btn ghost" data-mp-close>再看看</button>
+    <button class="mp-btn" data-mp-add>加入购物车</button>
+  </div>`;
+      applyMpArt();
+    }
+
+    function openMpSheet(id) {
+      const g = MP_GOODS.find(x => x.id === id);
+      if (!g) return;
+      mpState.product = g;
+      mpState.template = g.template;
+      mpState.zoom = 1;
+      mpState.x = 0;
+      mpState.y = 0;
+      if (!mpState.img) mpState.img = MP_PRESETS[0].img;
+      renderMpSheet();
+      $id("mpMask").classList.add("on");
+      $id("mpSheet").classList.add("on");
+    }
+
+    function closeMpSheet() {
+      $id("mpMask").classList.remove("on");
+      $id("mpSheet").classList.remove("on");
+    }
+
+    function renderMpCart() {
+      const box = $id("mpCartBox");
+      if (!mpState.cart.length) {
+        box.innerHTML = `<div class="mp-empty">还没有定制商品<em>去「发现」里选一个模板吧</em></div>`;
+        return;
+      }
+      box.innerHTML = mpState.cart.map((c, i) => `
+    <div class="mp-cart-item">
+      <div class="mp-cart-thumb" style="background-image:url('${c.img}')"></div>
+      <div class="mp-cart-info">
+        <b>${c.good.t}</b>
+        <em>${MP_TEMPLATES[c.tpl].name} · ${c.good.sub}</em>
+        <span>￥${c.good.p}</span>
+      </div>
+      <button class="mp-cart-del" data-mp-del="${i}" title="移除">✕</button>
+    </div>`).join("") +
+        `<button class="mp-btn block" data-mp-checkout>去结算（演示）</button>`;
+    }
+
+    function setMpTab(tab) {
+      mpState.tab = tab;
+      document.querySelectorAll("[data-mp-tab]").forEach(b => b.classList.toggle("on", b.dataset.mpTab === tab));
+      $id("mpPageDiscover").classList.toggle("active", tab === "discover");
+      $id("mpPageCart").classList.toggle("active", tab === "cart");
+      $id("mpPageMine").classList.toggle("active", tab === "mine");
+      $id("mpScreen").scrollTop = 0;
+      $id("mpTitle").textContent = tab === "discover" ? "周边定制" : tab === "cart" ? "我的定制" : "我的";
+      if (tab === "cart") renderMpCart();
+    }
+
+    function addMpCart() {
+      const g = mpState.product;
+      if (!g) return;
+      mpState.cart.unshift({ good: g, tpl: mpState.template, img: mpState.img });
+      appState.cartCount++;
+      cartBadge.textContent = appState.cartCount;
+      $id("mpCartDot").textContent = mpState.cart.length;
+      closeMpSheet();
+      renderMpCart();
+      toast("已加入购物车（演示）：" + g.t);
+    }
+
+    $id("hall-custom").addEventListener("click", e => {
+      const good = e.target.closest("[data-mp-good]");
+      if (good) { openMpSheet(good.dataset.mpGood); return; }
+      const tab = e.target.closest("[data-mp-tab]");
+      if (tab) { setMpTab(tab.dataset.mpTab); return; }
+      if (e.target.closest("[data-mp-close]")) { closeMpSheet(); return; }
+      const tpl = e.target.closest("[data-mp-tpl]");
+      if (tpl) {
+        mpState.template = tpl.dataset.mpTpl;
+        renderMpSheet();
+        return;
+      }
+      const artOpt = e.target.closest("[data-mp-art]");
+      if (artOpt) {
+        const a = MP_PRESETS.find(x => x.id === artOpt.dataset.mpArt);
+        if (a) {
+          mpState.img = a.img;
+          mpState.x = 0;
+          mpState.y = 0;
+          document.querySelectorAll(".mps-art-opt").forEach(el => el.classList.toggle("on", el === artOpt));
+          applyMpArt();
+        }
+        return;
+      }
+      if (e.target.closest("[data-mp-add]")) { addMpCart(); return; }
+      if (e.target.closest("[data-mp-checkout]")) { toast("演示：未接入支付接口"); return; }
+      const del = e.target.closest("[data-mp-del]");
+      if (del) {
+        mpState.cart.splice(Number(del.dataset.mpDel), 1);
+        $id("mpCartDot").textContent = mpState.cart.length;
+        renderMpCart();
+        toast("已从定制清单移除（演示）");
+      }
+    });
+
+    $id("mpMask").addEventListener("click", closeMpSheet);
+
+    $id("mpSheet").addEventListener("input", e => {
+      if (e.target.id === "mpZoom") {
+        mpState.zoom = Number(e.target.value) / 100;
+        applyMpArt();
+      }
+    });
+
+    $id("mpSheet").addEventListener("change", e => {
+      if (e.target.id !== "mpFile") return;
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        mpState.img = reader.result;
+        mpState.x = 0;
+        mpState.y = 0;
+        document.querySelectorAll(".mps-art-opt").forEach(el => el.classList.remove("on"));
+        applyMpArt();
+        toast("已套用本地图片（演示）");
+      };
+      reader.readAsDataURL(file);
+    });
+
+    /* 拖动预览图调整构图 */
+    (function bindMpDrag() {
+      const sheet = $id("mpSheet");
+      let drag = false, pid = 0, sx = 0, sy = 0, ox = 0, oy = 0;
+      sheet.addEventListener("pointerdown", e => {
+        if (!e.target.closest("#mpsPreview")) return;
+        drag = true;
+        pid = e.pointerId;
+        sx = e.clientX; sy = e.clientY;
+        ox = mpState.x; oy = mpState.y;
+        e.target.closest("#mpsPreview").setPointerCapture(pid);
+      });
+      sheet.addEventListener("pointermove", e => {
+        if (!drag) return;
+        mpState.x = Math.max(-90, Math.min(90, ox + e.clientX - sx));
+        mpState.y = Math.max(-90, Math.min(90, oy + e.clientY - sy));
+        applyMpArt();
+      });
+      sheet.addEventListener("pointerup", () => { drag = false; });
+    })();
+
+    (function initMp() {
+      renderMpGoods();
+      renderMpCart();
     })();
 
     initWandDemo();

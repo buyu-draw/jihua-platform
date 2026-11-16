@@ -79,8 +79,6 @@
         <span class="nav-sep"></span>
         <button class="tab" data-panel="dream">集梦</button>
         <button class="tab" data-panel="profile">个人主页</button>
-        <button class="tab" data-panel="draw">绘画</button>
-        <button class="tab" data-panel="custom">周边定制</button>
       </nav>
       <div class="nav-right">
         <button class="chip me-chip" id="meChip" title="进入我的个人主页">
@@ -111,6 +109,7 @@
             <button class="hall-item on" data-hall="commission">约稿<span>画师档期与约稿需求</span></button>
             <button class="hall-item" data-hall="text">约文<span>文案 / 剧本 / 世界观设定</span></button>
             <button class="hall-item" data-hall="goods">约制品<span>同人周边与工艺制品</span></button>
+            <button class="hall-item" data-hall="custom">周边定制<span>小程序式定制演示</span></button>
             <button class="hall-item" data-hall="demands">需求广场<span>公开需求单与接单委托</span></button>
           </aside>
 
@@ -200,6 +199,80 @@
               <div class="grid g4" id="goodsGrid"></div>
             </div>
 
+            <!-- 周边定制（移动端小程序演示） -->
+            <div class="hall-view" id="hall-custom">
+              <div class="sec-head">
+                <div>
+                  <h2>周边定制</h2>
+                  <p>像小程序一样流畅的移动端定制体验：选商品 → 上传图片 → 套用模板实时预览</p>
+                </div>
+                <div class="actions"><span class="demo-tag">演示</span></div>
+              </div>
+
+              <div class="mp-stage">
+                <div class="mp-phone">
+                  <div class="mp-status"><span>9:41</span><span class="mp-status-ico">▮▮▮ ᯤ ▰</span></div>
+                  <div class="mp-nav">
+                    <span class="mp-nav-side">‹</span>
+                    <b id="mpTitle">周边定制</b>
+                    <span class="mp-capsule">••• ⊙</span>
+                  </div>
+
+                  <div class="mp-screen" id="mpScreen">
+                    <div class="mp-page active" id="mpPageDiscover">
+                      <div class="mp-banner">
+                        <b>把你的画，做成周边</b>
+                        <p>上传作品，实时预览工艺效果</p>
+                        <span class="mp-banner-tag">今日可定制</span>
+                      </div>
+                      <div class="mp-sec-title">热门模板 <em>点击商品开始定制</em></div>
+                      <div class="mp-goods" id="mpGoods"></div>
+                    </div>
+
+                    <div class="mp-page" id="mpPageCart">
+                      <div class="mp-sec-title">我的定制 <em>仅保存在本页演示中</em></div>
+                      <div id="mpCartBox"></div>
+                    </div>
+
+                    <div class="mp-page" id="mpPageMine">
+                      <div class="mp-profile">
+                        <span class="mp-avatar">测</span>
+                        <div><b>演示用户</b><p>集画 · 周边定制体验版</p></div>
+                      </div>
+                      <div class="mp-list">
+                        <div class="mp-row"><span>我的订单</span><em>演示数据</em></div>
+                        <div class="mp-row"><span>收货地址</span><em>待完善</em></div>
+                        <div class="mp-row"><span>优惠券</span><em>2 张</em></div>
+                        <div class="mp-row"><span>联系客服</span><em>演示</em></div>
+                      </div>
+                      <p class="mp-foot-note">本页面为小程序界面高保真演示，未接入真实下单与支付接口。</p>
+                    </div>
+                  </div>
+
+                  <div class="mp-sheet-mask" id="mpMask"></div>
+                  <div class="mp-sheet" id="mpSheet"></div>
+
+                  <div class="mp-tabbar" id="mpTabbar">
+                    <button class="mp-tab on" data-mp-tab="discover"><i>⌂</i><span>发现</span></button>
+                    <button class="mp-tab" data-mp-tab="cart"><i>✎</i><span>定制</span><b class="mp-dot" id="mpCartDot">0</b></button>
+                    <button class="mp-tab" data-mp-tab="mine"><i>☺</i><span>我的</span></button>
+                  </div>
+                </div>
+
+                <aside class="mp-side">
+                  <p class="pane-head">演示说明</p>
+                  <p class="pane-desc">左侧是嵌入网页的手机界面，可点击商品体验完整定制流程。</p>
+                  <ul>
+                    <li>选择商品后从底部弹出定制面板</li>
+                    <li>内置图 / 本地上传图都可实时套用</li>
+                    <li>切换模板、缩放、拖动调整构图</li>
+                    <li>加入购物车只做前端计数</li>
+                  </ul>
+                  <p class="demo-note">未接入真实下单、支付与生产接口，所有数据仅存在当前页面。</p>
+                </aside>
+              </div>
+            </div>
+
             <!-- 需求广场 -->
             <div class="hall-view" id="hall-demands">
               <div class="sec-head">
@@ -243,7 +316,7 @@
             <div class="kicker">Dream Studio · 辅助绘画</div>
             <h2>一起来集梦吧！</h2>
             <p>把脑海里还没成形的画面，交给画笔与灵感，一步步变成可以看见的梦。</p>
-            <button class="btn" id="toAssistDraw">进入绘画工作台 →</button>
+            <button class="btn" id="toAssistDraw">开始绘画 →</button>
           </div>
           <div class="sec-head" style="margin-top:36px">
             <div>
